@@ -1,0 +1,16 @@
+{
+  "name": "Gestión Taller IES Albero",
+  "short_name": "Gestión Taller",
+  "description": "Gestión Taller del I.E.S. Albero: listados, socios, encuestas y horarios.",
+  "lang": "es",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f9f9f8",
+  "theme_color": "#dfb14b",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
