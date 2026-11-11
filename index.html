@@ -155,7 +155,7 @@ main.wide{max-width:1100px}
   <section id="v-detail" class="hide">
     <div class="card" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <button class="b s" onclick="go('lists')">Volver</button>
-      <span style="display:flex;gap:8px"><button class="b s" id="d-add" onclick="abrirAnadir()">＋ Añadir</button><button id="d-meta" class="b s" onclick="editarLista()">Editar lista</button><button id="d-share" class="b s" onclick="compartir()">Compartir</button><button id="d-cols" class="b s" onclick="abrirCols()">Columnas</button><button class="b" onclick="descargar()">Descargar PDF</button><button id="d-del" class="b r" onclick="borrar()">Eliminar</button></span>
+      <span style="display:flex;gap:8px"><button class="b s" id="d-add" onclick="abrirAnadir()">＋ Añadir</button><button id="d-meta" class="b s" onclick="editarLista()">Editar lista</button><button id="d-share" class="b s" onclick="compartir()">Compartir</button><button class="b" onclick="descargar()">Descargar PDF</button><button id="d-del" class="b r" onclick="borrar()">Eliminar</button></span>
     </div>
     <div class="card">
       <h2 id="d-title"></h2><p id="d-sub" style="margin:0 0 12px;color:#7b6a55"></p>
@@ -284,6 +284,23 @@ main.wide{max-width:1100px}
   <p id="u-nota" class="hide" style="margin:6px 0 0;color:#a3281b;font-size:13px">No puedes cambiar tus propios permisos. Tiene que hacerlo otro administrador.</p>
   <div class="bar"><button class="b s" onclick="$('usermodal').classList.add('hide')">Cancelar</button><button class="b r" id="u-del" onclick="borrarUser()">Eliminar</button><button class="b" onclick="guardarUser()">Guardar</button></div>
 </div></div>
+<div id="enlmodal" class="ov hide"><div class="card">
+  <h2 style="margin:0 0 4px">Enlaces de la lista</h2>
+  <p style="margin:0 0 12px;color:#6b5a45;font-size:14px">Cada enlace tiene su nombre y su permiso. Invalidar un enlace lo borra del todo.</p>
+  <div id="enl-lista"></div>
+  <div class="bar" style="justify-content:space-between"><button id="enl-nuevo" class="b" onclick="nuevoEnlace()">+ Nuevo enlace</button><button class="b s" onclick="$('enlmodal').classList.add('hide')">Cerrar</button></div>
+</div></div>
+<div id="linkmodal" class="ov hide"><div class="card" style="text-align:center">
+  <div style="font-size:38px;line-height:1">🔗</div>
+  <h2 style="margin:8px 0 4px">Enlace creado</h2>
+  <p id="lk-desc" style="margin:0 0 14px;color:#6b5a45;font-size:14px"></p>
+  <div style="display:flex;gap:8px;align-items:center;background:#faf6ec;border:1px solid #e6dccb;border-radius:12px;padding:8px 8px 8px 12px">
+    <input id="lk-url" readonly onclick="this.select()" style="flex:1;min-width:0;border:0;background:transparent;font-size:13px;color:#3e2713;padding:6px 0">
+    <button id="lk-copy" class="b" type="button" onclick="copiarEnlace()" style="white-space:nowrap">Copiar</button>
+  </div>
+  <p style="margin:12px 0 0;color:#8a7a65;font-size:12px">Crear un enlace nuevo invalida este.</p>
+  <div class="bar" style="justify-content:center"><button class="b s" onclick="$('linkmodal').classList.add('hide')">Cerrar</button></div>
+</div></div>
 <div id="rmodal" class="ov hide"><div class="card">
   <h2>He olvidado mi contraseña</h2>
   <p style="margin:0;color:#6b5a45;font-size:14px">Escribe tu nombre y el correo de tu cuenta. El administrador recibirá la solicitud y te dará una contraseña nueva.</p>
@@ -409,7 +426,7 @@ function go(v){
   VIEWS.forEach(x=>$('v-'+x).classList.toggle('hide',x!==v));
   $('tb-l').classList.toggle('hide',!['lists','create','detail'].includes(v));
   $('tb-e').classList.toggle('hide',!v.startsWith('e-'));$('tb-s').classList.toggle('hide',!v.startsWith('s-'));
-  $('tb-h').classList.toggle('hide',!v.startsWith('h-'));$('h-b-new').classList.toggle('hide',!can('horarios_editar'));$('l-nueva').classList.toggle('hide',!can('listados'));$('d-cols').classList.toggle('hide',!can('editar_columnas'));
+  $('tb-h').classList.toggle('hide',!v.startsWith('h-'));$('h-b-new').classList.toggle('hide',!can('horarios_editar'));$('l-nueva').classList.toggle('hide',!can('listados'));
   document.querySelector('main').classList.toggle('wide',v==='h-ver');
   if(v==='create'){fillLetters();tipoChg();pintarColsCrear();pintarEditores()}
   if(v==='lists')renderListas();
@@ -469,7 +486,7 @@ function tipoChg(){
   $('c-lbl').textContent=al?'Alumnos (uno por línea: Apellidos, Nombre)':t==='profesores'?'Profesores (uno por línea: Apellidos, Nombre)':(t==='otra'?'Elementos':TIPOSL[t])+' (uno por línea)';
 }
 function pintarColsCrear(arr){
-  const ro=!can('listados_editar');
+  const ro=!(can('listados_editar')||sharedMode==='editar');
   $('c-cols').innerHTML=(arr||cfg.cols||DEFCOLS).map(c=>filaCol(c,false,ro)).join('')+(ro?'':`<button class="b s" type="button" style="margin-top:8px" onclick="addFila('c-cols')">+ Añadir columna</button>`);
 }
 function filaCol(c,lock,ro){
@@ -536,8 +553,11 @@ const SP=new URLSearchParams(location.search),sharedId=SP.get('lista'),sharedTok
 let sharedMode=null;
 const esAdminL=()=>!!me&&!!me.admin;
 const permListas=()=>!!me&&Object.keys(me.permisos||{}).some(k=>!!me.permisos[k]&&canon(k)==='listados_editar');
+const enlacesDe=l=>l.enlaces||(l.compartido?[{tok:l.compartido.tok,nombre:'Enlace',modo:l.compartido.modo}]:[]);
+const esCreador=l=>!!me&&l.creador===me.id;
+const gestionaEnlaces=l=>!!me&&(esCreador(l)||can('listados_enlaces'));
 const esRestringida=l=>l.visibilidad==='restringida'||l.visibilidad==='privada';
-const puedeVer=l=>(sharedMode&&l.id===sharedId)||(!!me&&(!l.creador||!esRestringida(l)||l.creador===me.id||(l.editores||[]).includes(me.id)));
+const puedeVer=l=>(sharedMode&&l.id===sharedId)||(!!me&&(can('listados_enlaces')||!l.creador||!esRestringida(l)||l.creador===me.id||(l.editores||[]).includes(me.id)));
 const puedeEditar=l=>{if(sharedMode&&l.id===sharedId)return sharedMode==='editar';return !!me&&can('listados')&&(!l.creador||l.visibilidad==='publica'||l.creador===me.id||(l.editores||[]).includes(me.id))};
 const puedeEliminar=l=>{if(sharedMode&&l.id===sharedId)return sharedMode==='editar';return puedeVer(l)&&can('listados_eliminar')};
 function listasAdminHtml(){
@@ -568,8 +588,8 @@ function pintar(l,sigs){
   soloLectura=!puedeEditar(l);
   $('d-add').classList.toggle('hide',soloLectura);
   $('d-del').classList.toggle('hide',!puedeEliminar(l));
-  $('d-cols').classList.toggle('hide',soloLectura||!(can('editar_columnas')||sharedMode==='editar'));
-  $('d-share').classList.toggle('hide',!me||soloLectura);
+  
+  $('d-share').classList.toggle('hide',!gestionaEnlaces(l));
   $('d-meta').classList.toggle('hide',soloLectura);
   const cs=colsDe(l);
   $('d-title').textContent=cabecera(l);
@@ -598,24 +618,57 @@ async function editarLista(){
   if(!libre&&(!me||l.creador!==me.id)&&!tieneTodos()&&!await pedirAdmin())return;
   prepararEdicion(l);
 }
-async function compartir(){
-  const l=lists.find(x=>x.id===cur);if(!l||!me||!puedeEditar(l))return;
+async function copiarEnlace(auto){
+  try{await navigator.clipboard.writeText($('lk-url').value);$('lk-copy').textContent='¡Copiado!'}
+  catch(e){$('lk-url').select();$('lk-copy').textContent=auto?'Copiar':'Selecciona y copia'}
+}
+function listaActual(){return todasListas.find(x=>x.id===cur)}
+function urlEnlace(tok){return `${location.origin}${location.pathname}?lista=${cur}&t=${tok}`}
+function compartir(){
+  const l=listaActual();if(!l||!gestionaEnlaces(l))return;
+  pintarEnlaces();$('enlmodal').classList.remove('hide');
+}
+function pintarEnlaces(){
+  const l=listaActual();if(!l)return;
+  const en=enlacesDe(l);
+  $('enl-lista').innerHTML=en.length?en.map(e=>`<div class="item" style="cursor:default"><div><b>${esc(e.nombre)}</b><br><small>${e.modo==='ver'?'Solo ver':'Ver y editar'}</small></div><div style="display:flex;gap:6px;flex-shrink:0"><button class="b s" style="padding:6px 10px" onclick="copiarEnl('${e.tok}')">Copiar</button><button class="b r" style="padding:6px 10px" onclick="invalidarEnl('${e.tok}')">Invalidar</button></div></div>`).join(''):'<small style="color:#7b6a55">Esta lista no tiene enlaces activos.</small>';
+  $('enl-nuevo').classList.toggle('hide',!esCreador(l));
+}
+async function nuevoEnlace(){
+  const l=listaActual();if(!l||!esCreador(l))return;
+  const nombre=await dlg({title:'Nombre del enlace',msg:'Por ejemplo: Pepe o Profesor de Tecnología.',input:{type:'text',placeholder:'Nombre'},ok:'Siguiente',cancel:'Cancelar'});
+  if(nombre===null)return;
+  const n=String(nombre).trim();if(!n){await dlg({title:'Falta el nombre',msg:'Escribe un nombre para el enlace.'});return}
   let modo='ver';
-  if(!await dlg({title:'Compartir por enlace',msg:'Quien tenga el enlace podrá solo ver la lista.',ok:'Solo ver',cancel:'Ver y editar'})){
-    if(!await dlg({title:'¿Permitir editar?',msg:'Quien tenga el enlace podrá ver, editar, añadir columnas y eliminar la lista.',ok:'Sí, permitir editar',cancel:'Cancelar'}))return;
+  if(!await dlg({title:'Permiso del enlace',msg:'Quien tenga este enlace podrá solo ver la lista.',ok:'Solo ver',cancel:'Ver y editar'})){
+    if(!await dlg({title:'¿Permitir editar?',msg:'Quien tenga este enlace podrá ver, editar, añadir columnas y eliminar la lista.',ok:'Sí, permitir editar',cancel:'Cancelar'}))return;
     modo='editar';
   }
   const tok=Math.random().toString(36).slice(2,10)+Date.now().toString(36);
-  store.upd(cur,{compartido:{tok,modo}}).catch(console.error);
-  const url=`${location.origin}${location.pathname}?lista=${cur}&t=${tok}`;
-  try{await navigator.clipboard.writeText(url)}catch(e){}
-  await dlg({title:'Enlace creado',msg:`${url}\n\nSe ha copiado. Crear un enlace nuevo invalida el anterior.`});
+  store.upd(cur,{enlaces:[...enlacesDe(l),{tok,nombre:n,modo}],compartido:null}).catch(console.error);
+  $('lk-url').value=urlEnlace(tok);
+  $('lk-desc').textContent=modo==='ver'?`Enlace de "${n}": podrá solo ver esta lista.`:`Enlace de "${n}": podrá ver, editar, añadir columnas y eliminar esta lista.`;
+  $('linkmodal').classList.remove('hide');
+  copiarEnlace(true);
+  setTimeout(pintarEnlaces,400);
+}
+async function copiarEnl(tok){
+  const u=urlEnlace(tok);
+  try{await navigator.clipboard.writeText(u);await dlg({title:'Copiado',msg:'El enlace está en el portapapeles.'})}
+  catch(e){await dlg({title:'Enlace',msg:u})}
+}
+async function invalidarEnl(tok){
+  const l=listaActual();if(!l||!gestionaEnlaces(l))return;
+  const e=enlacesDe(l).find(x=>x.tok===tok);if(!e)return;
+  if(!await dlg({title:'Invalidar enlace',msg:`El enlace "${e.nombre}" dejará de funcionar. No se puede reactivar; si lo necesitas, crea uno nuevo.`,ok:'Invalidar',cancel:'Cancelar'}))return;
+  store.upd(cur,{enlaces:enlacesDe(l).filter(x=>x.tok!==tok),compartido:null}).catch(console.error);
+  setTimeout(pintarEnlaces,400);
 }
 function abrirEnlace(){
   if(sharedMode||!sharedId)return;
-  const l=todasListas.find(x=>x.id===sharedId&&x.compartido&&x.compartido.tok===sharedTok);
+  const l=todasListas.find(x=>x.id===sharedId&&enlacesDe(x).some(e=>e.tok===sharedTok));
   if(!l)return;
-  sharedMode=l.compartido.modo;cur=l.id;
+  sharedMode=enlacesDe(l).find(e=>e.tok===sharedTok).modo;cur=l.id;
   $('login').classList.add('hide');$('app').classList.remove('hide');$('who').textContent='Enlace compartido';
   VIEWS.forEach(x=>$('v-'+x).classList.toggle('hide',x!=='detail'));
   pintar(l,false);
@@ -672,7 +725,7 @@ function pintarFirmas(l){
 }
 
 /* ---------- Usuarios, apps y encuestas ---------- */
-const PERMS=[['listados','Listados: usar (ver, marcar y rellenar las listas a las que tiene acceso)'],['listados_editar','Listados: crear y editar (listas, columnas y ajustes)'],['listados_eliminar','Listados: eliminar listas'],['encuestas','Encuestas: usar (responder y ver el historial)'],['encuestas_editar','Encuestas: crear y editar preguntas'],['encuestas_eliminar','Encuestas: eliminar respuestas'],['socios','Socios: usar (buscar, ver y editar datos)'],['socios_crear','Socios: crear (socios, productos, tarjetas y quitar productos de cuentas)'],['socios_eliminar','Socios: eliminar socios'],['horarios_editar','Horarios: crear, editar y eliminar'],['gestionar_propuestas','Ver y gestionar propuestas'],['gestionar_usuarios','Gestionar usuarios'],['gestionar_apps','Activar/desactivar apps y ajustes de Encuestas']];
+const PERMS=[['listados','Listados: usar (ver, marcar y rellenar las listas a las que tiene acceso)'],['listados_editar','Listados: crear y editar (listas, columnas y ajustes)'],['listados_eliminar','Listados: eliminar listas'],['listados_enlaces','Listados: gestionar enlaces compartidos'],['encuestas','Encuestas: usar (responder y ver el historial)'],['encuestas_editar','Encuestas: crear y editar preguntas'],['encuestas_eliminar','Encuestas: eliminar respuestas'],['socios','Socios: usar (buscar, ver y editar datos)'],['socios_crear','Socios: crear (socios, productos, tarjetas y quitar productos de cuentas)'],['socios_eliminar','Socios: eliminar socios'],['horarios_editar','Horarios: crear, editar y eliminar'],['gestionar_propuestas','Ver y gestionar propuestas'],['gestionar_usuarios','Gestionar usuarios'],['gestionar_apps','Activar/desactivar apps y ajustes de Encuestas']];
 const TIPOS={texto:'Texto',numero:'Número',test:'Test (una sola opción)',multiple:'Varias opciones',correo:'Correo @iesalbero.es',curso:'Curso y grupo'};
 const ALIAS={editar_columnas:'listados_editar',ajustes_listados:'listados_editar',eliminar_listas:'listados_eliminar',ver_respuestas:'encuestas',editar_preguntas:'encuestas_editar',eliminar_respuestas:'encuestas_eliminar',socios_cuenta:'socios_crear',socios_productos:'socios_crear',socios_tarjetas:'socios_crear',socios_editar:'socios',socios_borrar:'socios_eliminar'};
 const canon=p=>ALIAS[p]||p;
