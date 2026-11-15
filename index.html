@@ -1378,32 +1378,19 @@ async function generarPDF(orient){
   doc.setFontSize(8.5);doc.setTextColor(110,95,75);
   const info=`${l.concepto}  ·  Curso ${l.year}  ·  ${l.fecha}`;
   if(land){doc.text(info,PW-M,13.5,{align:'right'})}else{doc.text(info,M,29)}
-  // Tabla
-  const cs=colsDe(l),sig=l.firmas!==false,n=l.alumnos.length+(sig?1:0);
-  const rh=Math.min(7,(PH-8-32-10-(sig?26:0))/(l.alumnos.length+1));
+  // Tabla: si las firmas están activas, columna "Firma" en cada fila y filas más altas
+  const cs=colsDe(l),sig=l.firmas!==false,n=l.alumnos.length;
+  const TOP=32,FIRMA_W=36,avail=PH-8-TOP-10;
+  const rh=sig?Math.max(9,Math.min(12,avail/n)):Math.min(7,avail/n);
   const fs=rh>=5.6?9:(rh>=4.8?8:7),pad=Math.max(.5,(rh-fs*.406)/2);
-  const body=l.alumnos.map((nm,k)=>{const e=(l.est||{})[k]||{};return[k+1,nm,...cs.map(c=>c.tipo==='check'?(e[c.id]?'Sí':''):(e[c.id]==null?'':String(e[c.id])))]});
-  const total=cs.length+2,mitad=Math.ceil(total/2);
-  if(sig){
-    body.push([
-      {content:'Responsable de reparto\n'+(l.nombre1||''),colSpan:mitad,styles:{minCellHeight:26,valign:'bottom',halign:'left',fillColor:[255,255,255]}},
-      {content:'Profesor\n'+(l.nombre2||''),colSpan:total-mitad,styles:{minCellHeight:26,valign:'bottom',halign:'left',fillColor:[255,255,255]}}
-    ]);
-  }
-  const ancho=(UW-10)/(cs.length+1);
-  doc.autoTable({startY:32,margin:{left:M,right:M,bottom:8},tableWidth:UW,
-    head:[['Nº',ELEM[l.tipo||'alumnos'],...cs.map(c=>c.nombre)]],body,
+  const body=l.alumnos.map((nm,k)=>{const e=(l.est||{})[k]||{};return[k+1,nm,...cs.map(c=>c.tipo==='check'?(e[c.id]?'Sí':''):(e[c.id]==null?'':String(e[c.id]))),...(sig?['']:[])]});
+  const head=['Nº',ELEM[l.tipo||'alumnos'],...cs.map(c=>c.nombre),...(sig?['Firma']:[])];
+  const cols=head.length;
+  const anchoBase=(UW-10-(sig?FIRMA_W:0))/(cs.length+1);
+  doc.autoTable({startY:TOP,margin:{left:M,right:M,bottom:8},tableWidth:UW,head:[head],body,
     headStyles:{fillColor:[122,82,48]},alternateRowStyles:{fillColor:[250,246,236]},rowPageBreak:'avoid',
-    columnStyles:(()=>{const o={0:{cellWidth:10},1:{cellWidth:ancho}};cs.forEach((c,k)=>o[k+2]={cellWidth:ancho,halign:c.tipo==='check'?'center':'left'});return o})(),
-    styles:{fontSize:fs,overflow:'linebreak',cellPadding:{top:pad,bottom:pad,left:2,right:2},lineHeightFactor:1.15},
-    didDrawCell:(d)=>{
-      if(!sig||d.section!=='body'||d.row.index!==body.length-1)return;
-      const f=d.column.index===0?l.firma1:(d.column.index===mitad?l.firma2:null);
-      if(!f)return;
-      const pr=doc.getImageProperties(f),r=pr.width/pr.height;
-      let h=Math.min(14,(d.cell.width-8)/r),w=h*r;
-      doc.addImage(f,'PNG',d.cell.x+4,d.cell.y+1,w,h);
-    }
+    columnStyles:(()=>{const o={0:{cellWidth:10},1:{cellWidth:anchoBase}};cs.forEach((c,k)=>o[k+2]={cellWidth:anchoBase,halign:c.tipo==='check'?'center':'left'});if(sig)o[cols-1]={cellWidth:FIRMA_W};return o})(),
+    styles:{fontSize:fs,overflow:'linebreak',cellPadding:{top:pad,bottom:pad,left:2,right:2},lineHeightFactor:1.15,minCellHeight:rh}
   });
   doc.save(`Listado ${titulo(l)} - ${l.concepto}${land?' (horizontal)':''}.pdf`.replace(/[\\\\/:*?\"<>|]/g,''));
 }
