@@ -131,7 +131,7 @@ main.wide{max-width:1100px}
   <div id="tb-h" class="card tb hide"><button class="b" onclick="go('h-lista')">Todos los horarios</button><button id="h-b-new" class="b s hide" onclick="editHorario()">＋ Nuevo horario</button></div>
   <section id="v-home"><div class="card"><h2>Hola, <span id="h-name"></span></h2><div id="home-cards"></div></div></section>
   <section id="v-lists" class="hide">
-    <div class="card"><h2>Listas guardadas</h2><div id="lists"></div></div>
+    <div class="card"><h2>Listas guardadas</h2><input id="lb-busq" type="search" placeholder="Buscar por concepto, curso, departamento o fecha" oninput="renderListas()" autocomplete="off" style="margin-bottom:10px"><div id="lists"></div></div>
   </section>
 
   <section id="v-create" class="hide"><div class="card">
@@ -160,7 +160,7 @@ main.wide{max-width:1100px}
     </div>
     <div class="card">
       <h2 id="d-title"></h2><p id="d-sub" style="margin:0 0 12px;color:#7b6a55"></p>
-      <div style="overflow-x:auto"><table><thead id="d-head"></thead><tbody id="d-rows"></tbody></table></div>
+      <input id="d-busq" type="search" placeholder="Buscar en esta lista: nombre, asignatura, profesor…" oninput="pintar(listaActual(),false)" autocomplete="off" style="margin-bottom:10px"><div style="overflow-x:auto"><table><thead id="d-head"></thead><tbody id="d-rows"></tbody></table></div>
     </div>
     <div class="card"><h2 style="font-size:17px">Firmas</h2>
       <div class="sig">
@@ -586,7 +586,9 @@ function renderListas(){
   abrirEnlace();
   const arr=todasListas.filter(puedeVer);lists=arr;
   if(me&&me.admin&&!$('v-admin').classList.contains('hide'))pintarAdmin();
-  $('lists').innerHTML=arr.length?arr.map(l=>`<div class="item" onclick="abrir('${l.id}')"><img src="${LOGO_SRC}" alt="" style="width:40px;height:40px;object-fit:contain;flex-shrink:0;margin-right:10px"><div style="flex:1;min-width:0"><b>${esc(l.concepto)}</b><br><small>${esc(titulo(l))}</small><br><small style="color:#8a7a65">${l.fecha}${l.hora?' · '+l.hora:''}${l.visibilidad==='restringida'||l.visibilidad==='privada'?' · 🔒 Restringida':l.visibilidad==='compartida'?' · Privada':''}</small></div><span>›</span></div>`).join(''):'<p style="color:#7b6a55">Aún no hay listas. Crea la primera con “Nueva lista”.</p>';
+  const norm=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const q=norm($('lb-busq')?.value).trim(),shown=arr.filter(l=>!q||norm([l.concepto,titulo(l),l.fecha,l.hora,l.year].join(' ')).includes(q));
+  $('lists').innerHTML=shown.length?shown.map(l=>`<div class="item" onclick="abrir('${l.id}')"><img src="${LOGO_SRC}" alt="" style="width:40px;height:40px;object-fit:contain;flex-shrink:0;margin-right:10px"><div style="flex:1;min-width:0"><b>${esc(l.concepto)}</b><br><small>${esc(titulo(l))}</small><br><small style="color:#8a7a65">${l.fecha}${l.hora?' · '+l.hora:''}${l.visibilidad==='restringida'||l.visibilidad==='privada'?' · 🔒 Restringida':l.visibilidad==='compartida'?' · Privada':''}</small></div><span>›</span></div>`).join(''):'<p style="color:#7b6a55">Aún no hay listas. Crea la primera con “Nueva lista”.</p>';
   if(cur){const l=lists.find(x=>x.id===cur);if(l&&!$('v-detail').classList.contains('hide')&&!(document.activeElement&&['text','number'].includes(document.activeElement.type)&&document.activeElement.closest('#d-rows')))pintar(l,false)}
 }
 store.subLists(arr=>{todasListas=arr;renderListas()});
@@ -599,6 +601,12 @@ function celda(c,i,v){
   return`<input ${ro} style="min-width:110px" value="${esc(v==null?'':v)}" onchange="marcar(${i},'${c.id}',this.value)">`;
 }
 let soloLectura=false;
+const normTxt=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function matchFila(l,nombre,i,q){
+  const e=(l.est||{})[i]||{};
+  const txt=[nombre,...colsDe(l).map(c=>c.tipo==='check'?(e[c.id]?'sí':''):(e[c.id]==null?'':e[c.id]))].join(' ');
+  return normTxt(txt).includes(q);
+}
 function pintar(l,sigs){
   soloLectura=!puedeEditar(l);
   $('d-add').classList.toggle('hide',soloLectura);
@@ -610,7 +618,8 @@ function pintar(l,sigs){
   $('d-title').textContent=cabecera(l);
   $('d-sub').textContent=`${l.concepto} · Curso ${l.year} · ${l.fecha}`;
   $('d-head').innerHTML=`<tr><th>Nº</th><th>${ELEM[l.tipo||'alumnos']}</th>${cs.map(c=>`<th class="${c.tipo==='check'?'c':''}">${esc(c.nombre)}</th>`).join('')}</tr>`;
-  $('d-rows').innerHTML=l.alumnos.map((n,i)=>{const e=(l.est||{})[i]||{};
+  const qd=normTxt($('d-busq')?.value).trim();
+  $('d-rows').innerHTML=l.alumnos.map((n,i)=>({n,i})).filter(({n,i})=>!qd||matchFila(l,n,i,qd)).map(({n,i})=>{const e=(l.est||{})[i]||{};
     return`<tr><td>${i+1}</td><td>${esc(n)}</td>${cs.map(c=>`<td class="${c.tipo==='check'?'c':''}">${celda(c,i,e[c.id])}</td>`).join('')}</tr>`}).join('');
   pintarFirmas(l);
 }
