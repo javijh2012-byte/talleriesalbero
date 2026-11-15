@@ -285,6 +285,16 @@ main.wide{max-width:1100px}
   <p id="u-nota" class="hide" style="margin:6px 0 0;color:#a3281b;font-size:13px">No puedes cambiar tus propios permisos. Tiene que hacerlo otro administrador.</p>
   <div class="bar"><button class="b s" onclick="$('usermodal').classList.add('hide')">Cancelar</button><button class="b r" id="u-del" onclick="borrarUser()">Eliminar</button><button class="b" onclick="guardarUser()">Guardar</button></div>
 </div></div>
+<div id="pdfmodal" class="ov hide"><div class="card" style="text-align:center">
+  <div style="font-size:38px;line-height:1">📄</div>
+  <h2 style="margin:8px 0 4px">Descargar PDF</h2>
+  <p style="margin:0 0 16px;color:#6b5a45;font-size:14px">Elige la orientación de la hoja.</p>
+  <div style="display:flex;gap:10px">
+    <button class="b" style="flex:1" onclick="generarPDF('p')">Vertical</button>
+    <button class="b" style="flex:1" onclick="generarPDF('l')">Horizontal</button>
+  </div>
+  <div class="bar" style="justify-content:center"><button class="b s" onclick="$('pdfmodal').classList.add('hide')">Cancelar</button></div>
+</div></div>
 <div id="enlmodal" class="ov hide"><div class="card">
   <h2 style="margin:0 0 4px">Enlaces de la lista</h2>
   <p style="margin:0 0 12px;color:#6b5a45;font-size:14px">Cada enlace tiene su nombre y su permiso. Invalidar un enlace lo borra del todo.</p>
@@ -1347,34 +1357,55 @@ async function logoPng(){
   c.getContext('2d').drawImage(im,0,0,c.width,c.height);
   return{d:c.toDataURL('image/png'),w:c.width,h:c.height};
 }
-async function descargar(){
-  const l=lists.find(x=>x.id===cur);if(!l)return;
-  const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'mm',format:'a4'});
-  const lg=await logoPng(),lh=16,lw=Math.min(24,lh*lg.w/lg.h),tx=14+lw+5;
-  doc.addImage(lg.d,'PNG',14,8,lw,lh);
+function descargar(){
+  if(!listaActual())return;
+  $('pdfmodal').classList.remove('hide');
+}
+async function generarPDF(orient){
+  $('pdfmodal').classList.add('hide');
+  const l=listaActual();if(!l)return;
+  const land=orient==='l';
+  const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'mm',format:'a4',orientation:land?'landscape':'portrait'});
+  const PW=doc.internal.pageSize.getWidth(),PH=doc.internal.pageSize.getHeight(),M=14,UW=PW-2*M;
+  // Encabezado horizontal: logo, título y datos a lo ancho
+  const lg=await logoPng(),lh=16,lw=Math.min(24,lh*lg.w/lg.h),tx=M+lw+5;
+  doc.addImage(lg.d,'PNG',M,8,lw,lh);
   doc.setTextColor(62,39,19);
   doc.setFont('helvetica','bold');doc.setFontSize(13);doc.text(cabecera(l),tx,13.5);
   doc.setFont('helvetica','normal');doc.setFontSize(9);
   doc.text('Taller de Tecnología',tx,18.5);
   doc.text('Departamento de Tecnología del IES Albero',tx,22.5);
   doc.setFontSize(8.5);doc.setTextColor(110,95,75);
-  doc.text(`${l.concepto}  ·  Curso ${l.year}  ·  ${l.fecha}`,14,29);
-  const cs=colsDe(l),n=l.alumnos.length,rh=Math.min(7,(286-32-5-31)/(n+1)),fs=rh>=5.6?9:(rh>=4.8?8:7),pad=Math.max(.5,(rh-fs*.406)/2);
-  doc.autoTable({startY:32,margin:{left:14,right:14,bottom:8},tableWidth:182,head:[['Nº',ELEM[l.tipo||'alumnos'],...cs.map(c=>c.nombre)]],
-    body:l.alumnos.map((nm,k)=>{const e=(l.est||{})[k]||{};return[k+1,nm,...cs.map(c=>c.tipo==='check'?(e[c.id]?'Sí':''):(e[c.id]==null?'':String(e[c.id])))]}),
-    headStyles:{fillColor:[122,82,48]},alternateRowStyles:{fillColor:[250,246,236]},rowPageBreak:'avoid',
-    columnStyles:(()=>{const w=(182-10)/(cs.length+1),o={0:{cellWidth:10},1:{cellWidth:w}};cs.forEach((c,k)=>o[k+2]={cellWidth:w,halign:c.tipo==='check'?'center':'left'});return o})(),
-    styles:{fontSize:fs,overflow:'linebreak',cellPadding:{top:pad,bottom:pad,left:2,right:2},lineHeightFactor:1.15}});
-  let y=doc.lastAutoTable.finalY+5;
-  if(y+31>289){doc.addPage();y=15}
-  doc.setTextColor(62,39,19);doc.setFontSize(9);
-  const dim=u=>new Promise(r=>{const m=new Image();m.onload=()=>r(m);m.onerror=()=>r(null);m.src=u});
-  for(const [f,t,x,nm] of (l.firmas===false?[]:[[l.firma1,'Responsable de reparto',20,l.nombre1],[l.firma2,'Profesor',115,l.nombre2]])){
-    if(f){const m=await dim(f);if(m){const r=m.width/m.height;let w=70,h=70/r;if(h>18){h=18;w=18*r}doc.addImage(f,'PNG',x,y+18-h,w,h)}}
-    doc.setDrawColor(150);doc.line(x,y+19,x+70,y+19);doc.text(t,x,y+24);
-    if(nm){doc.setFontSize(8.5);doc.text(nm,x,y+28.5);doc.setFontSize(9)}
+  const info=`${l.concepto}  ·  Curso ${l.year}  ·  ${l.fecha}`;
+  if(land){doc.text(info,PW-M,13.5,{align:'right'})}else{doc.text(info,M,29)}
+  // Tabla
+  const cs=colsDe(l),sig=l.firmas!==false,n=l.alumnos.length+(sig?1:0);
+  const rh=Math.min(7,(PH-8-32-10-(sig?26:0))/(l.alumnos.length+1));
+  const fs=rh>=5.6?9:(rh>=4.8?8:7),pad=Math.max(.5,(rh-fs*.406)/2);
+  const body=l.alumnos.map((nm,k)=>{const e=(l.est||{})[k]||{};return[k+1,nm,...cs.map(c=>c.tipo==='check'?(e[c.id]?'Sí':''):(e[c.id]==null?'':String(e[c.id])))]});
+  const total=cs.length+2,mitad=Math.ceil(total/2);
+  if(sig){
+    body.push([
+      {content:'Responsable de reparto\n'+(l.nombre1||''),colSpan:mitad,styles:{minCellHeight:26,valign:'bottom',halign:'left',fillColor:[255,255,255]}},
+      {content:'Profesor\n'+(l.nombre2||''),colSpan:total-mitad,styles:{minCellHeight:26,valign:'bottom',halign:'left',fillColor:[255,255,255]}}
+    ]);
   }
-  doc.save(`Listado ${titulo(l)} - ${l.concepto}.pdf`.replace(/[\\/:*?"<>|]/g,''));
+  const ancho=(UW-10)/(cs.length+1);
+  doc.autoTable({startY:32,margin:{left:M,right:M,bottom:8},tableWidth:UW,
+    head:[['Nº',ELEM[l.tipo||'alumnos'],...cs.map(c=>c.nombre)]],body,
+    headStyles:{fillColor:[122,82,48]},alternateRowStyles:{fillColor:[250,246,236]},rowPageBreak:'avoid',
+    columnStyles:(()=>{const o={0:{cellWidth:10},1:{cellWidth:ancho}};cs.forEach((c,k)=>o[k+2]={cellWidth:ancho,halign:c.tipo==='check'?'center':'left'});return o})(),
+    styles:{fontSize:fs,overflow:'linebreak',cellPadding:{top:pad,bottom:pad,left:2,right:2},lineHeightFactor:1.15},
+    didDrawCell:(d)=>{
+      if(!sig||d.section!=='body'||d.row.index!==body.length-1)return;
+      const f=d.column.index===0?l.firma1:(d.column.index===mitad?l.firma2:null);
+      if(!f)return;
+      const pr=doc.getImageProperties(f),r=pr.width/pr.height;
+      let h=Math.min(14,(d.cell.width-8)/r),w=h*r;
+      doc.addImage(f,'PNG',d.cell.x+4,d.cell.y+1,w,h);
+    }
+  });
+  doc.save(`Listado ${titulo(l)} - ${l.concepto}${land?' (horizontal)':''}.pdf`.replace(/[\\\\/:*?\"<>|]/g,''));
 }
 </script>
 </body>
