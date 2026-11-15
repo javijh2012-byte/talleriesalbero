@@ -1381,7 +1381,7 @@ async function generarPDF(orient){
   // Tabla: si las firmas están activas, columna "Firma" en cada fila y filas más altas
   const cs=colsDe(l),sig=l.firmas!==false,n=l.alumnos.length;
   const TOP=32,FIRMA_W=36,avail=PH-8-TOP-10;
-  const rh=sig?Math.max(9,Math.min(12,avail/n)):Math.min(7,avail/n);
+  const rh=sig?Math.max(8,Math.min(14,avail/n)):Math.min(7,avail/n);
   const fs=rh>=5.6?9:(rh>=4.8?8:7),pad=Math.max(.5,(rh-fs*.406)/2);
   const body=l.alumnos.map((nm,k)=>{const e=(l.est||{})[k]||{};return[k+1,nm,...cs.map(c=>c.tipo==='check'?(e[c.id]?'Sí':''):(e[c.id]==null?'':String(e[c.id]))),...(sig?['']:[])]});
   const head=['Nº',ELEM[l.tipo||'alumnos'],...cs.map(c=>c.nombre),...(sig?['Firma']:[])];
@@ -1390,7 +1390,8 @@ async function generarPDF(orient){
   doc.autoTable({startY:TOP,margin:{left:M,right:M,bottom:8},tableWidth:UW,head:[head],body,
     headStyles:{fillColor:[122,82,48]},alternateRowStyles:{fillColor:[250,246,236]},rowPageBreak:'avoid',
     columnStyles:(()=>{const o={0:{cellWidth:10},1:{cellWidth:anchoBase}};cs.forEach((c,k)=>o[k+2]={cellWidth:anchoBase,halign:c.tipo==='check'?'center':'left'});if(sig)o[cols-1]={cellWidth:FIRMA_W};return o})(),
-    styles:{fontSize:fs,overflow:'linebreak',cellPadding:{top:pad,bottom:pad,left:2,right:2},lineHeightFactor:1.15,minCellHeight:rh}
+    styles:{fontSize:fs,overflow:'linebreak',cellPadding:{top:pad,bottom:pad,left:2,right:2},lineHeightFactor:1.15,minCellHeight:rh},
+    didParseCell:d=>{if(sig&&d.section==='body'){d.cell.styles.minCellHeight=rh;d.cell.height=Math.max(d.cell.height||0,rh)}}
   });
   doc.save(`Listado ${titulo(l)} - ${l.concepto}${land?' (horizontal)':''}.pdf`.replace(/[\\\\/:*?\"<>|]/g,''));
 }
