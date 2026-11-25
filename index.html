@@ -100,6 +100,7 @@ main.wide{max-width:1100px}
 
 <div id="pubform" class="hide" style="max-width:720px;margin:0 auto;padding:18px"></div>
 <div id="login"><div class="card">
+<button class="b s" style="width:100%;margin-bottom:12px" onclick="secAbrirCodigo('')">Tengo un código de Secretaría</button>
   <img id="logo0" alt="Logo" width="72" height="72" style="object-fit:contain">
   <h2 style="margin-top:8px">Gestión Taller</h2>
   <p style="margin:0 0 14px;color:#7b6a55">I.E.S. Albero</p>
@@ -114,6 +115,8 @@ main.wide{max-width:1100px}
   <p id="dbst" style="font-size:12px;color:#7b6a55;margin:12px 0 0">Versión 4 · conectando…</p>
 </div></div>
 
+<div id="sec-hueco" class="hide" style="position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:60"><div id="sec-hueco-box" class="card" style="max-width:420px;width:90%;margin:18vh auto"></div></div>
+<div id="sec-cod" class="hide" style="position:fixed;inset:0;background:#f7f3ea;overflow:auto;z-index:50;padding:16px"><div id="sec-cod-body" style="max-width:720px;margin:0 auto"></div></div>
 <div id="app" class="hide">
 <header>
   <img id="logo1" alt="Logo" width="40" height="40" style="object-fit:contain">
@@ -193,6 +196,7 @@ main.wide{max-width:1100px}
   <section id="v-h-ver" class="hide"><div id="h-ver-body"></div></section>
   <section id="v-propuestas" class="hide"><div id="prop-body"></div></section>
   <section id="v-admin" class="hide"><div id="admin-body"></div></section>
+  <section id="v-sec" class="hide"><div id="sec-body"></div></section>
 </main>
 </div>
 
@@ -465,7 +469,7 @@ async function pedirAdmin(){
 }
 
 /* ---------- Navegación ---------- */
-const VIEWS=['home','lists','create','detail','e-fill','e-resp','e-edit','s-buscar','s-crear','s-perfil','propuestas','admin','h-lista','h-ver','f-inicio','f-edit','f-resp'];
+const VIEWS=['home','lists','create','detail','e-fill','e-resp','e-edit','s-buscar','s-crear','s-perfil','propuestas','admin','h-lista','h-ver','f-inicio','f-edit','f-resp','sec'];
 const gate=v=>(['lists','create','detail'].includes(v)&&!(appOn('listados')&&can('listados')))||(v.startsWith('e-')&&!(appOn('encuestas')&&can('encuestas')))||(v.startsWith('s-')&&!(appOn('socios')&&can('socios')))||(v.startsWith('h-')&&!appOn('horarios'));
 function go(v){
   if(me&&gate(v))v='home';
@@ -479,7 +483,7 @@ function go(v){
   if(v.startsWith('e-')){$('e-b-resp').classList.toggle('hide',!can('ver_respuestas'));$('e-b-edit').classList.toggle('hide',!can('editar_preguntas'))}
   if(v==='h-lista')pintarHLista();if(v==='h-ver')pintarHVer();
   if(v==='f-inicio')pintarFInicio();if(v==='f-edit')pintarFEditor();if(v==='f-resp')pintarFResp();
-  if(v==='home')pintarHome();if(v==='propuestas')pintarProp();if(v==='admin')pintarAdmin();if(v==='e-fill')pintarForm();if(v==='e-resp')pintarResp();if(v==='e-edit')pintarPreg();if(v==='s-buscar')buscarSocios();if(v==='s-crear')resetCrearSocio();if(v==='s-perfil')pintarPerfil();
+  if(v==='home')pintarHome();if(v==='sec')pintarSec();if(v==='propuestas')pintarProp();if(v==='admin')pintarAdmin();if(v==='e-fill')pintarForm();if(v==='e-resp')pintarResp();if(v==='e-edit')pintarPreg();if(v==='s-buscar')buscarSocios();if(v==='s-crear')resetCrearSocio();if(v==='s-perfil')pintarPerfil();
 }
 let logoNuevo='';
 function subirLogo(inp){
@@ -785,7 +789,7 @@ function pintarFirmas(l){
 }
 
 /* ---------- Usuarios, apps y encuestas ---------- */
-const PERMS=[['listados','Listados: usar (ver, marcar y rellenar las listas a las que tiene acceso)'],['listados_editar','Listados: crear y editar (listas, columnas y ajustes)'],['listados_eliminar','Listados: eliminar listas'],['listados_enlaces','Listados: gestionar enlaces compartidos'],['encuestas','Encuestas: usar (responder y ver el historial)'],['encuestas_editar','Encuestas: crear y editar preguntas'],['encuestas_eliminar','Encuestas: eliminar respuestas'],['socios','Socios: usar (buscar, ver y editar datos)'],['socios_crear','Socios: crear (socios, productos, tarjetas y quitar productos de cuentas)'],['socios_eliminar','Socios: eliminar socios'],['horarios_editar','Horarios: crear, editar y eliminar'],['gestionar_propuestas','Ver y gestionar propuestas'],['gestionar_usuarios','Gestionar usuarios'],['gestionar_apps','Activar/desactivar apps y ajustes de Encuestas'],['privacidad_editar','Privacidad y consentimientos: editar los textos de todos los formularios'],['formularios_eliminar','Formularios: eliminar respuestas']];
+const PERMS=[['listados','Listados: usar (ver, marcar y rellenar las listas a las que tiene acceso)'],['listados_editar','Listados: crear y editar (listas, columnas y ajustes)'],['listados_eliminar','Listados: eliminar listas'],['listados_enlaces','Listados: gestionar enlaces compartidos'],['encuestas','Encuestas: usar (responder y ver el historial)'],['encuestas_editar','Encuestas: crear y editar preguntas'],['encuestas_eliminar','Encuestas: eliminar respuestas'],['socios','Socios: usar (buscar, ver y editar datos)'],['socios_crear','Socios: crear (socios, productos, tarjetas y quitar productos de cuentas)'],['socios_eliminar','Socios: eliminar socios'],['horarios_editar','Horarios: crear, editar y eliminar'],['gestionar_propuestas','Ver y gestionar propuestas'],['gestionar_usuarios','Gestionar usuarios'],['gestionar_apps','Activar/desactivar apps y ajustes de Encuestas'],['privacidad_editar','Privacidad y consentimientos: editar los textos de todos los formularios'],['formularios_eliminar','Formularios: eliminar respuestas'],['secretaria','Secretaría: ver documentos y entrar en la sección'],['secretaria_editar','Secretaría: subir documentos y carpetas, generar códigos de acceso y rellenar y descargar documentos']];
 const TIPOS={texto:'Texto',numero:'Número',test:'Test (una sola opción)',multiple:'Varias opciones',correo:'Correo @iesalbero.es',curso:'Curso y grupo'};
 const ALIAS={editar_columnas:'listados_editar',ajustes_listados:'listados_editar',eliminar_listas:'listados_eliminar',ver_respuestas:'encuestas',editar_preguntas:'encuestas_editar',eliminar_respuestas:'encuestas_eliminar',socios_cuenta:'socios_crear',socios_productos:'socios_crear',socios_tarjetas:'socios_crear',socios_editar:'socios',socios_borrar:'socios_eliminar'};
 const canon=p=>ALIAS[p]||p;
@@ -839,6 +843,7 @@ function pintarHome(){
   if(appOn('socios')&&can('socios'))c.push(['🛒','Socios',"go('s-buscar')"]);
   if(appOn('encuestas')&&can('encuestas'))c.push(['❓','Encuestas',"go('e-fill')"]);
   c.push(['📝','Formularios',"go('f-inicio')",fNuevasTotal()]);
+  if(can('secretaria'))c.push(['🗂️','Secretaría',"go('sec')"]);
   if(appOn('horarios'))c.push(['🕒','Horarios',"go('h-lista')"]);
   c.push(['⚙️','Ajustes',"go('admin')"]);
   const pend=can('gestionar_propuestas')?propuestas.filter(x=>x.estado!=='hecha').length:0;
@@ -1552,7 +1557,7 @@ async function generarPDF(orient){
 
 /* ===== Formularios (integrado en la gestión del taller) ===== */
 let fForms=[],fBorr=null,fActivo=null,fUnsubResp=null;
-const FTIPOS={texto:'Texto',numero:'Número',opcion:'Elegir una opción',correo:'Correo (@iesalbero.es)',curso:'Curso (etapa, nivel y grupo)',textolargo:'Texto largo',multiple:'Casillas (varias opciones)',fecha:'Fecha',escala:'Escala del 1 al 5'};
+const FTIPOS={descripcion:'Descripción (texto informativo)',texto:'Texto',numero:'Número',opcion:'Elegir una opción',correo:'Correo (@iesalbero.es)',curso:'Curso (etapa, nivel y grupo)',textolargo:'Texto largo',multiple:'Casillas (varias opciones)',fecha:'Fecha',escala:'Escala del 1 al 5'};
 const FPRESETS={'Cursos':['1º ESO','2º ESO','3º ESO','4º ESO','1º Bachillerato','2º Bachillerato'],'Sí / No':['Sí','No']};
 const FMAIL='@iesalbero.es';
 const fLink=id=>location.origin+location.pathname+'?f='+id;
@@ -1590,10 +1595,10 @@ function pintarFInicio(){
   $('f-inicio-body').innerHTML=`<div class="card"><div class="fl"><h2 style="margin:0">Formularios</h2><button class="b" onclick="fNuevo()">+ Nuevo</button></div>`+
   (mis.length?mis.map(f=>`<div class="item" style="cursor:pointer" onclick="fResp('${f.id}')"><div><b>${esc(f.nombre)}</b><br><small>${(f.preguntas||[]).length} preguntas${f.cerrado?' · 🔒 Cerrado':''} · ${fEsCreador(f)?'Creado por ti':'Creado por '+esc(f.creador)}</small></div><span>${fNuevas(f)?`<b class="badge">${fNuevas(f)} nueva${fNuevas(f)>1?'s':''}</b> `:''}›</span></div>`).join(''):'<p style="color:#7b6a55">Todavía no hay formularios.</p>')+`</div>`;
 }
-function fNuevo(){fBorr={id:null,nombre:'',preguntas:[],verPor:[],inicio:fInicioDef(),limite:0,unaPorPersona:false};go('f-edit')}
+function fNuevo(){fBorr={id:null,nombre:'',preguntas:[],verPor:[],inicio:fInicioDef(),limite:0,unaPorPersona:false,cursos:[]};go('f-edit')}
 function fEditarForm(id){
   const f=fForms.find(x=>x.id===id);if(!f||!fPuedeEditar(f))return;
-  fBorr={id,nombre:f.nombre||'',preguntas:JSON.parse(JSON.stringify(f.preguntas||[])),verPor:[...(f.verPor||[])],limite:f.limite||0,unaPorPersona:!!f.unaPorPersona,inicio:JSON.parse(JSON.stringify({...fInicioDef(),...(f.inicio||{}),...privDe()}))};
+  fBorr={id,nombre:f.nombre||'',preguntas:JSON.parse(JSON.stringify(f.preguntas||[])),verPor:[...(f.verPor||[])],limite:f.limite||0,unaPorPersona:!!f.unaPorPersona,cursos:[...(f.cursosPermitidos||[])],inicio:JSON.parse(JSON.stringify({...fInicioDef(),...(f.inicio||{}),...privDe()}))};
   go('f-edit');
 }
 function pintarFEditor(){
@@ -1605,7 +1610,7 @@ function pintarFEditor(){
   ${fControlHTML(b)}
   <h2 style="margin-top:18px;font-size:17px">Preguntas</h2>
   ${b.preguntas.map((p,i)=>fPregunta(p,i)).join('')}
-  <div class="fl" style="margin-top:8px"><select id="frm-tipo" style="width:auto">${Object.entries(FTIPOS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><button class="b s" onclick="fAddP()">+ Añadir pregunta</button></div>
+  ${fBloqueCursos()}<div class="fl" style="margin-top:8px"><select id="frm-tipo" style="width:auto">${Object.entries(FTIPOS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><button class="b s" onclick="fAddP()">+ Añadir pregunta</button></div>
   </div>
   <div class="card"><h2 style="font-size:17px">Quién puede ver las respuestas</h2><small>Tú siempre puedes verlas. Elige además a quién dar acceso.</small>
   ${pers.length?pers.map(u=>`<label style="font-weight:400;display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" style="width:auto" value="${esc(u.id)}" ${b.verPor.includes(u.id)?'checked':''} onchange="fVer(this)"> ${esc(u.nombre||u.usuario)}</label>`).join(''):'<small>No hay otros usuarios activos.</small>'}</div>
@@ -1618,12 +1623,42 @@ function fPregunta(p,i){
     extra=`<label>Opciones (una por línea)</label><textarea style="width:100%" oninput="fSetP(${i},'opciones',this.value.split('\\n').map(x=>x.trim()).filter(Boolean))">${esc((p.opciones||[]).join('\n'))}</textarea>
     <div class="fl" style="margin-top:6px;justify-content:flex-start;gap:6px">${Object.keys(FPRESETS).map(k=>`<button class="b s" style="padding:6px 10px;font-size:13px" onclick="fPreset(${i},'${k}')">Usar: ${k}</button>`).join('')}</div>`;
   }
+  if(p.tipo==='descripcion')extra='<small style="display:block;margin-top:8px;color:#7b6a55">Este texto se muestra tal cual en el formulario y no pide respuesta.</small>';
   if(p.tipo==='curso')extra=`<small style="display:block;margin-top:8px;color:#7b6a55">Se muestra como en los listados: Etapa (ESO / Bachillerato), Nivel y Grupo. Los grupos salen de Ajustes (ESO: ${esc(cfg.eso)} · Bachillerato: ${esc(cfg.bach)}). La respuesta se guarda como «1º ESO A».</small>`;
-  return `<div class="card" style="background:#fdfbf5"><div class="fl" style="justify-content:space-between"><b>${i+1}. ${FTIPOS[p.tipo]||p.tipo}</b><button class="b r" style="padding:6px 10px" onclick="fQuitarP(${i})">Quitar</button></div>
+  return `<div class="card" style="background:#fdfbf5"><div class="fl" style="justify-content:space-between"><select onchange="fCambiarTipo(${i},this.value)" style="width:auto">${Object.entries(FTIPOS).map(([k,v])=>`<option value="${k}" ${k===p.tipo?'selected':''}>${v}</option>`).join('')}</select><div class="fl" style="gap:6px"><button class="b s" style="padding:6px 10px" onclick="fMoverP(${i},-1)">↑</button><button class="b s" style="padding:6px 10px" onclick="fMoverP(${i},1)">↓</button><button class="b r" style="padding:6px 10px" onclick="fQuitarP(${i})">Quitar</button></div></div>
   <label>Texto de la pregunta</label><input value="${esc(p.texto)}" oninput="fSetP(${i},'texto',this.value)">
-  <label style="font-weight:400;display:flex;gap:8px;align-items:center"><input type="checkbox" style="width:auto" ${p.obligatoria?'checked':''} onchange="fSetP(${i},'obligatoria',this.checked)"> Obligatoria</label>${extra}</div>`;
+  <label style="font-weight:400;display:flex;gap:8px;align-items:center"><input type="checkbox" style="width:auto" ${p.obligatoria?'checked':''} onchange="fSetP(${i},'obligatoria',this.checked)"> Obligatoria</label>${extra}${fCondUI(p,i)}</div>`;
 }
-function fAddP(){const t=$('frm-tipo').value;fBorr.preguntas.push({id:'p'+Date.now()+Math.random().toString(36).slice(2,5),tipo:t,texto:'',obligatoria:false,opciones:[],...(t==='curso'?{eso:cfg.eso,bach:cfg.bach}:{})});pintarFEditor()}
+// ===== Mejoras de formularios =====
+const FCURSOS=['ESO 1º','ESO 2º','ESO 3º','ESO 4º','Bachillerato 1º','Bachillerato 2º'];
+function fMoverP(i,d){const j=i+d;if(j<0||j>=fBorr.preguntas.length)return;[fBorr.preguntas[i],fBorr.preguntas[j]]=[fBorr.preguntas[j],fBorr.preguntas[i]];pintarFEditor()}
+function fCambiarTipo(i,t){const p=fBorr.preguntas[i];p.tipo=t;if(t==='curso'){p.eso=p.eso||cfg.eso;p.bach=p.bach||cfg.bach}if(!String(p.texto||'').trim())p.texto=t==='correo'?'Correo':t==='curso'?'Curso':'';pintarFEditor()}
+function fSetCond(i,k,v){const p=fBorr.preguntas[i];if(k==='p'){p.si=v?{p:v,v:''}:null;pintarFEditor()}else p.si={...(p.si||{}),v}}
+function fCondUI(p,i){
+  const prev=fBorr.preguntas.slice(0,i).filter(q=>q.tipo!=='descripcion');
+  if(!prev.length)return '';
+  const c=p.si||{},pq=prev.find(q=>q.id===c.p);
+  return `<label>Mostrar esta pregunta solo si…</label><select onchange="fSetCond(${i},'p',this.value)" style="width:100%"><option value="">Siempre</option>${prev.map((q,j)=>`<option value="${q.id}" ${q.id===c.p?'selected':''}>${esc(q.texto||('Pregunta '+(j+1)))}</option>`).join('')}</select>${pq&&(pq.tipo==='opcion'||pq.tipo==='multiple')?`<select onchange="fSetCond(${i},'v',this.value)" style="width:100%;margin-top:6px"><option value="">Cualquier respuesta</option>${(pq.opciones||[]).map(o=>`<option ${c.v===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`:(pq?'<small>Se mostrará cuando la pregunta elegida tenga respuesta.</small>':'')}`;
+}
+function fBloqueCursos(){return `<div class="card" style="background:#fdfbf5;margin:8px 0"><b>Cursos admitidos</b><small style="display:block;color:#7b6a55">Si no marcas ninguno, pueden responder todos. Afecta a las preguntas de tipo Curso.</small><div class="fl" style="gap:12px;flex-wrap:wrap;margin-top:6px">${FCURSOS.map(c=>`<label class="ck" style="margin:0"><input type="checkbox" style="width:auto" ${(fBorr.cursos||[]).includes(c)?'checked':''} onchange="fCursoPerm('${c}',this.checked)"> ${c}</label>`).join('')}</div></div>`}
+function fCursoPerm(c,on){const l=fBorr.cursos||[];fBorr.cursos=on?[...new Set([...l,c])]:l.filter(x=>x!==c)}
+function fCursoOk(e,n){const c=fPub.f?.cursosPermitidos||[];return !c.length||c.includes(e+' '+n)}
+function fValor(p){
+  if(p.tipo==='opcion')return (document.getElementById('fq-'+p.id)||{}).value||'';
+  if(p.tipo==='multiple')return [...document.querySelectorAll('input[name="fq-'+p.id+'"]:checked')].map(x=>x.value).join(', ');
+  if(p.tipo==='escala')return (document.querySelector('input[name="fq-'+p.id+'"]:checked')||{}).value||'';
+  return ((document.getElementById('fq-'+p.id)||{}).value||'').trim();
+}
+function fVisible(p,ps){
+  if(!p.si||!p.si.p)return true;
+  const ref=ps.find(q=>q.id===p.si.p);if(!ref)return true;
+  if(!fVisible(ref,ps))return false;
+  const v=fValor(ref);
+  if(!p.si.v)return !!v;
+  return ref.tipo==='multiple'?v.split(', ').includes(p.si.v):v===p.si.v;
+}
+function fPubRefrescar(){const ps=fPub.f?.preguntas||[];ps.forEach(p=>{const el=document.getElementById('fw-'+p.id);if(el)el.style.display=fVisible(p,ps)?'':'none'})}
+function fAddP(){const t=$('frm-tipo').value;fBorr.preguntas.push({id:'p'+Date.now()+Math.random().toString(36).slice(2,5),tipo:t,texto:t==='correo'?'Correo':t==='curso'?'Curso':'',obligatoria:false,opciones:[],...(t==='curso'?{eso:cfg.eso,bach:cfg.bach}:{})});pintarFEditor()}
 function fSetP(i,k,v){fBorr.preguntas[i][k]=v}
 function fPreset(i,k){fBorr.preguntas[i].opciones=[...FPRESETS[k]];pintarFEditor()}
 function fQuitarP(i){fBorr.preguntas.splice(i,1);pintarFEditor()}
@@ -1641,7 +1676,7 @@ async function fGuardar(){
     if(!pc)return err('Para limitar a una respuesta por persona añade una pregunta de tipo Correo.');
     pc.obligatoria=true;
   }
-  const datos={nombre:b.nombre.trim(),preguntas:b.preguntas,verPor:b.verPor,inicio:b.inicio,limite:Math.max(0,parseInt(b.limite)||0),unaPorPersona:!!b.unaPorPersona};
+  const datos={nombre:b.nombre.trim(),preguntas:b.preguntas,verPor:b.verPor,inicio:b.inicio,limite:Math.max(0,parseInt(b.limite)||0),unaPorPersona:!!b.unaPorPersona,cursosPermitidos:b.cursos||[]};
   try{
     const fdb=firebase.firestore();
     if(b.id)await fdb.collection('formularios').doc(b.id).update(datos);
@@ -1712,6 +1747,264 @@ async function fEliminarResp(id){
     await bt.commit();
   }catch(e){await dlg({title:'No se pudo eliminar',msg:'Inténtalo de nuevo. ('+(e.code||e.message)+')',ok:'Vale'})}
 }
+// ===== SECRETARÍA =====
+let secDocs=[],secCodigos=[],secPorta=null,secUnsub=null,secUnsubCod=null,secRelActual=[];
+const secSlug=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+const secCarpetas=()=>cfg.sec?.carpetas||[];
+const secTodasCarpetas=()=>[...new Set([...secCarpetas(),...secDocs.map(d=>d.carpeta).filter(Boolean)])];
+const secEdit=()=>can('secretaria_editar');
+const secLibs={};
+function secLib(url){return secLibs[url]||(secLibs[url]=new Promise((ok,ko)=>{const s=document.createElement('script');s.src=url;s.onload=ok;s.onerror=()=>{delete secLibs[url];ko(new Error('No se pudo cargar una librería necesaria. Revisa la conexión.'))};document.head.appendChild(s)}))}
+function secCampos(html){const out=[];[...String(html).matchAll(/\{\{([^}]+)\}\}/g)].forEach(m=>{const e=m[1].trim(),c=secSlug(e);if(c&&!out.some(o=>o.clave===c))out.push({clave:c,etiqueta:e})});return out}
+function secRellenar(html,v={}){return String(html).replace(/\{\{([^}]+)\}\}/g,(_,e)=>v[secSlug(e)]?esc(v[secSlug(e)]):'__________________________')}
+function secFormHTML(d,v={}){return (d.campos||[]).length?d.campos.map(c=>`<label>${esc(c.etiqueta)}</label><input data-clave="${c.clave}" value="${esc(v[c.clave]||'')}" style="width:100%">`).join(''):'<small>Este documento no tiene huecos para rellenar.</small>'}
+function secLeer(id){const o={};document.querySelectorAll('#'+id+' [data-clave]').forEach(i=>o[i.dataset.clave]=i.value.trim());return o}
+function secDescargar(nombre,html){const doc='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"></head><body style="font-family:Calibri,Arial;font-size:11pt">'+html+'</body></html>';const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+doc],{type:'application/msword'}));a.download=nombre.replace(/[\\/:*?"<>|]+/g,'').trim()+'.doc';a.click()}
+async function secCargarDatos(uid){const s=await firebase.firestore().collection('secretariaDatos').doc(uid).get();return s.exists?(s.data().valores||{}):{}}
+async function secGuardarDatos(uid,v){const actual=await secCargarDatos(uid);await firebase.firestore().collection('secretariaDatos').doc(uid).set({valores:{...actual,...v},actualizado:Date.now()})}
+
+function secSuscribir(){
+  if(!secUnsub)secUnsub=firebase.firestore().collection('secretariaDocs').onSnapshot(s=>{secDocs=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));if(vista()==='sec'&&$('sec-lista'))$('sec-lista').innerHTML=secListaHTML()});
+  if(secEdit()&&!secUnsubCod)secUnsubCod=firebase.firestore().collection('secretariaCodigos').onSnapshot(s=>{secCodigos=s.docs.map(d=>({id:d.id,...d.data()}))});
+}
+function pintarSec(){
+  if(!secCan()){$('sec-body').innerHTML='<div class="card">No tienes acceso a Secretaría.</div>';return}
+  secSuscribir();
+  $('sec-body').innerHTML=`<div class="card">
+    <div class="fl" style="margin-bottom:10px;flex-wrap:wrap;gap:6px"><h2 style="margin:0">Secretaría</h2><div class="fl" style="gap:6px;flex-wrap:wrap">${secEdit()?`<button class="b" onclick="secNuevoDoc()">＋ Subir documento</button><button class="b s" onclick="secPanelCarpeta()">＋ Carpeta</button><button class="b s" onclick="secPanelAccesos()">Accesos por código</button>`:''}<button class="b s" onclick="go('home')">Volver</button></div></div>
+    <div id="sec-panel"></div>
+    <input type="search" id="sec-busq" placeholder="Buscar por nombre o para quién" oninput="$('sec-lista').innerHTML=secListaHTML()" style="margin-bottom:10px">
+    <div id="sec-lista">${secListaHTML()}</div></div>`;
+}
+function secCan(){return can('secretaria')}
+function secListaHTML(){
+  const q=secSlug($('sec-busq')?.value||'');
+  const docs=secDocs.filter(d=>!q||secSlug(d.nombre+' '+(d.para||'')).includes(q));
+  if(!docs.length)return '<p style="color:#7b6a55">No hay documentos'+(q?' con esa búsqueda':' todavía')+'.</p>';
+  return [...secTodasCarpetas(),''].map(c=>{const l=docs.filter(d=>(d.carpeta||'')===c);return l.length?`<h3 style="font-size:15px;margin:14px 0 6px">📁 ${c?esc(c):'Sin carpeta'}</h3>`+l.map(secFilaHTML).join(''):''}).join('');
+}
+function secFilaHTML(d){
+  const ed=secEdit();
+  return `<div class="card" style="margin:6px 0;padding:10px"><div class="fl" style="flex-wrap:wrap;gap:6px"><div style="flex:1;min-width:180px"><b>${esc(d.nombre)}</b><br><small>${d.tipo==='archivo'?'Archivo':'Plantilla con huecos'}${d.para?' · Para: '+esc(d.para):''}${d.tipo!=='archivo'?' · '+(d.campos||[]).length+' huecos':''}</small></div><div class="fl" style="gap:6px;flex-wrap:wrap">${(me?.admin||d.creadoPor===me?.id)?`<button class="b s" onclick="secDetalle('${d.id}')">Detalle</button>`:''}${d.tipo==='archivo'?`<a class="b s" href="${d.archivo}" download="${esc(d.nombreArchivo||'documento')}">Descargar</a>`:`<button class="b" onclick="secPreview('${d.id}')">Abrir</button>`}${ed?`<select onchange="secMover('${d.id}',this.value)" style="width:auto"><option value="">Sin carpeta</option>${secTodasCarpetas().map(c=>`<option ${c===d.carpeta?'selected':''}>${esc(c)}</option>`).join('')}</select><button class="b r" style="padding:6px 10px" onclick="secBorrarDoc('${d.id}')">✕</button>`:''}</div></div></div>`;
+}
+function secPanelCarpeta(){$('sec-panel').innerHTML=`<div class="card" style="background:#fdfbf5"><h3 style="margin-top:0">Nueva carpeta</h3><div class="fl" style="gap:6px"><input id="sc-nombre" placeholder="Ej.: Autorizaciones 2026-27" style="flex:1"><button class="b" onclick="secCarpetaGuardar()">Crear</button><button class="b s" onclick="$('sec-panel').innerHTML=''">Cancelar</button></div></div>`}
+async function secCarpetaGuardar(){const n=$('sc-nombre').value.trim();if(!n)return;const lista=[...secCarpetas()];if(!lista.includes(n))lista.push(n);await store.setCfg({...cfg,sec:{...(cfg.sec||{}),carpetas:lista}});$('sec-panel').innerHTML=''}
+async function secMover(id,carpeta){if(!secEdit())return;await firebase.firestore().collection('secretariaDocs').doc(id).update({carpeta})}
+async function secBorrarDoc(id){const d=secDocs.find(x=>x.id===id);if(!await dlg({title:'Eliminar documento',msg:'Se borrará «'+(d?.nombre||'')+'». ¿Seguro?',ok:'Eliminar',cancel:'Cancelar'}))return;await firebase.firestore().collection('secretariaDocs').doc(id).delete();$('sec-panel').innerHTML=''}
+
+function secNuevoDoc(){if(!secEdit())return;$('sec-panel').innerHTML=`<div class="card" style="background:#fdfbf5"><h3 style="margin-top:0">Subir documento</h3>
+<label>Nombre</label><input id="sn-nombre" placeholder="Ej.: Autorización de salida">
+<label>Carpeta</label><select id="sn-carpeta"><option value="">Sin carpeta</option>${secTodasCarpetas().map(c=>`<option>${esc(c)}</option>`).join('')}</select>
+<label>Para quién es</label><input id="sn-para" placeholder="Ej.: Familias de 1.º ESO">
+<label>Archivo</label><input id="sn-file" type="file">
+<small>Acepta Word (.docx), PDF, texto, imágenes y cualquier otro archivo de hasta 600 KB. En un Word puedes escribir huecos entre llaves dobles, por ejemplo {{Nombre del alumno}} o {{DNI}}: se convierten en campos que se rellenan en pantalla o quedan en blanco para escribir a mano. El resto de archivos se guardan para descargar tal cual.</small>
+<div class="fl" style="gap:6px;margin-top:10px"><button class="b s" onclick="$('sec-panel').innerHTML=''">Cancelar</button><button id="sn-guardar" class="b" onclick="secGuardarNuevo()">Guardar</button></div></div>`}
+function secLeerArchivo(f){return new Promise((ok,ko)=>{const rd=new FileReader();rd.onload=()=>ok(rd.result);rd.onerror=()=>ko(new Error('No se pudo leer el archivo'));rd.readAsDataURL(f)})}
+async function secGuardarNuevo(){
+  if(!secEdit())return dlg({title:'Sin permiso',msg:'No tienes permiso para subir documentos.',ok:'Vale'});
+  const nombre=$('sn-nombre').value.trim(),f=$('sn-file').files[0],btn=$('sn-guardar');
+  if(!nombre)return dlg({title:'Falta el nombre',msg:'Escribe un nombre para el documento.',ok:'Vale'});
+  if(!f)return dlg({title:'Falta el archivo',msg:'Elige un archivo con el botón «Elegir archivo».',ok:'Vale'});
+  if(f.size>600*1024)return dlg({title:'Archivo demasiado grande',msg:'El máximo es 600 KB por archivo. Este pesa '+Math.round(f.size/1024)+' KB. Reduce el PDF o divídelo.',ok:'Vale'});
+  const base={nombre,carpeta:$('sn-carpeta').value,para:$('sn-para').value.trim(),creado:Date.now(),nombreArchivo:f.name,creadoPor:me?.id||'',creadoPorNombre:me?.nombre||me?.usuario||''};
+  let aviso='';
+  if(btn){btn.disabled=true;btn.textContent='Subiendo…'}
+  try{
+    let doc=null;
+    if(/\.docx$/i.test(f.name)){
+      try{
+        await secLib('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
+        const html=(await mammoth.convertToHtml({arrayBuffer:await f.arrayBuffer()})).value;
+        doc={...base,tipo:'plantilla',html,campos:secCampos(html)};
+      }catch(e){aviso='No se pudo leer el Word como plantilla, así que se ha guardado como archivo para descargar.'}
+    }else if(/\.(txt|html?)$/i.test(f.name)){
+      const t=await f.text();
+      const html=/\.html?$/i.test(f.name)?t:t.split(/\n+/).map(l=>`<p>${esc(l)}</p>`).join('');
+      doc={...base,tipo:'plantilla',html,campos:secCampos(html)};
+    }
+    if(!doc)doc={...base,tipo:'archivo',archivo:await secLeerArchivo(f),campos:[]};
+    if(JSON.stringify(doc).length>1000000)return dlg({title:'Documento demasiado grande',msg:'Firebase admite como máximo 1 MB por documento. Reduce el archivo.',ok:'Vale'});
+    await firebase.firestore().collection('secretariaDocs').add(doc);
+    $('sec-panel').innerHTML='';
+    if(aviso)await dlg({title:'Guardado',msg:aviso,ok:'Vale'});
+  }catch(e){
+    const msg=e.code==='permission-denied'?'Firebase no permite escribir en «secretariaDocs». Hay que revisar las reglas de Firestore (instrucciones en el chat).':(e.message||String(e));
+    await dlg({title:'No se pudo guardar',msg,ok:'Vale'});
+  }finally{
+    const b=$('sn-guardar');if(b){b.disabled=false;b.textContent='Guardar'}
+  }
+}
+
+// Respuestas por documento (quién lo rellenó y con qué datos)
+function secPersonasOpts(){return users.filter(u=>!u.pendiente).map(u=>`<option value="${u.id}">${esc(u.nombre||u.usuario)}</option>`).join('')}
+async function secGuardarRelleno(docId,uid,v,por){
+  const ref=firebase.firestore().collection('secretariaRellenos').doc(docId+'_'+uid);
+  const prev=(await ref.get()).data()?.valores||{};
+  const u=users.find(x=>x.id===uid);
+  await ref.set({docId,uid,nombre:u?.nombre||u?.usuario||secPorta?.nombre||'',valores:{...prev,...v},por,fecha:Date.now()});
+}
+async function secDetalle(id){
+  const d=secDocs.find(x=>x.id===id);if(!d)return;
+  if(!(me?.admin||d.creadoPor===me?.id))return dlg({title:'Sin acceso',msg:'Solo puede ver el detalle quien creó el documento o un administrador.',ok:'Vale'});
+  const snap=await firebase.firestore().collection('secretariaRellenos').where('docId','==',id).get();
+  secRelActual=snap.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+  const campos=d.campos||[];
+  $('sec-panel').innerHTML=`<div class="card" style="background:#fdfbf5">
+  <div class="fl" style="flex-wrap:wrap;gap:6px"><h3 style="margin:0;flex:1">${esc(d.nombre)}</h3><button class="b s" onclick="$('sec-panel').innerHTML=''">Cerrar</button></div>
+  <small>Creado por ${esc(d.creadoPorNombre||'—')} · ${secRelActual.length} persona(s) lo han rellenado</small>
+  <div class="fl" style="gap:6px;margin:10px 0;flex-wrap:wrap"><select id="sd-uid" style="flex:1;min-width:180px"><option value="">— Rellenar para una persona —</option>${secPersonasOpts()}</select><button class="b" onclick="secDetalleEditar('${id}')">Abrir formulario</button></div>
+  <div id="sd-form"></div>
+  <div style="overflow-x:auto">${secRelActual.length?`<table><thead><tr><th><input type="checkbox" onclick="document.querySelectorAll('.sd-ck').forEach(c=>c.checked=this.checked)"></th><th>Persona</th><th>Rellenado por</th><th>Fecha</th>${campos.map(c=>`<th>${esc(c.etiqueta)}</th>`).join('')}<th></th></tr></thead><tbody>${secRelActual.map(r=>`<tr><td><input type="checkbox" class="sd-ck" value="${r.uid}"></td><td>${esc(r.nombre)}</td><td>${esc(r.por||'')}</td><td>${new Date(r.fecha).toLocaleDateString('es-ES')}</td>${campos.map(c=>`<td>${esc((r.valores||{})[c.clave]||'')}</td>`).join('')}<td><button class="b s" onclick="secDetalleEditar('${id}','${r.uid}')">Editar</button></td></tr>`).join('')}</tbody></table>`:'<p style="color:#7b6a55">Nadie ha rellenado este documento todavía.</p>'}</div>
+  <div class="fl" style="gap:6px;margin-top:10px;flex-wrap:wrap"><button class="b" onclick="secDescargarSel('${id}')">Descargar seleccionados (en un solo archivo)</button><button class="b s" onclick="secDescargarSel('${id}',true)">Descargar en blanco</button></div></div>`;
+}
+async function secDetalleEditar(id,uidArg){
+  const d=secDocs.find(x=>x.id===id);
+  const uid=uidArg||$('sd-uid')?.value;
+  if(!d||!uid)return dlg({title:'Elige una persona',msg:'Selecciona a quién corresponde el documento.',ok:'Vale'});
+  const rel=await firebase.firestore().collection('secretariaRellenos').doc(id+'_'+uid).get();
+  const v=rel.exists?(rel.data().valores||{}):await secCargarDatos(uid);
+  $('sd-form').innerHTML=`<div class="card" style="margin:8px 0"><b>${esc(users.find(u=>u.id===uid)?.nombre||'')}</b><div id="sd-campos" style="margin-top:6px">${secFormHTML(d,v)}</div><div class="fl" style="gap:6px;margin-top:8px"><button class="b" onclick="secDetalleGuardar('${id}','${uid}')">Guardar</button><button class="b s" onclick="$('sd-form').innerHTML=''">Cancelar</button></div></div>`;
+}
+async function secDetalleGuardar(id,uid){
+  const v=secLeer('sd-campos');
+  await secGuardarDatos(uid,v);
+  await secGuardarRelleno(id,uid,v,me?.nombre||me?.usuario||'');
+  secDetalle(id);
+}
+function secDescargarSel(id,enBlanco){
+  const d=secDocs.find(x=>x.id===id);if(!d)return;
+  if(enBlanco)return secDescargar(d.nombre+' (en blanco)',secRellenar(d.html));
+  const sel=[...document.querySelectorAll('.sd-ck:checked')].map(c=>c.value);
+  if(!sel.length)return dlg({title:'Sin selección',msg:'Marca las personas cuyos datos quieres en el documento.',ok:'Vale'});
+  const partes=sel.map(uid=>{const r=secRelActual.find(x=>x.uid===uid);return `<div style="page-break-after:always">${secRellenar(d.html,r?.valores||{})}</div>`});
+  secDescargar(d.nombre+' - '+sel.length+' persona(s)',partes.join(''));
+}
+
+// Vista previa del documento con huecos clicables
+let secPrev=null;
+async function secPreview(id,uidArg){
+  const d=secDocs.find(x=>x.id===id);if(!d||d.tipo!=='plantilla')return;
+  const admin=!!(me?.admin||secEdit()||d.creadoPor===me?.id);
+  const uid=admin?(uidArg||$('sp-uid')?.value||''):me.id;
+  let v=uid?await secCargarDatos(uid):{};
+  if(uid&&admin){const r=await firebase.firestore().collection('secretariaRellenos').doc(id+'_'+uid).get();if(r.exists)v={...v,...(r.data().valores||{})}}
+  secPrev={id,uid,admin,d,v};
+  secPintarPreview();
+}
+function secPintarPreview(){
+  const {id,d,v,uid,admin}=secPrev;
+  const html=String(d.html).replace(/\{\{([^}]+)\}\}/g,(_,e)=>{const k=secSlug(e),val=v[k];return `<span onclick="secHueco('${k}')" style="cursor:pointer;border-bottom:1px dashed #b8a27a;padding:0 4px;background:#fff7e0;${val?'':'color:#9a8a70'}">${val?esc(val):esc(e.trim())}</span>`});
+  $('sec-panel').innerHTML=`<div class="card" style="background:#fdfbf5">
+   <div class="fl" style="flex-wrap:wrap;gap:6px"><h3 style="margin:0;flex:1">${esc(d.nombre)}</h3><button class="b s" onclick="$('sec-panel').innerHTML=''">Cerrar</button></div>
+   ${admin?`<div class="fl" style="gap:6px;margin:8px 0;flex-wrap:wrap"><select id="sp-uid" onchange="secPreview('${id}',this.value)" style="flex:1;min-width:180px"><option value="">— Elegir persona —</option>${secPersonasOpts()}</select></div>`:''}
+   <small>Toca un hueco para escribir su contenido.</small>
+   <div style="background:#fff;border:1px solid #e5dccb;border-radius:10px;padding:24px;margin-top:10px;max-height:65vh;overflow:auto;font-family:Calibri,Arial,sans-serif;line-height:1.6">${html}</div>
+   ${admin&&uid?`<div class="fl" style="gap:6px;margin-top:10px;flex-wrap:wrap"><button class="b s" onclick="secDescargarPrev(true)">Descargar en blanco</button><button class="b" onclick="secDescargarPrev(false)">Descargar con estos datos</button></div>`:''}
+  </div>`;
+  if(admin&&$('sp-uid'))$('sp-uid').value=uid;
+}
+function secHueco(k){
+  const {d,v,uid}=secPrev;
+  if(!uid)return dlg({title:'Elige una persona',msg:'Primero selecciona a quién corresponde el documento.',ok:'Vale'});
+  const campo=(d.campos||[]).find(c=>c.clave===k)||{etiqueta:k};
+  $('sec-hueco-box').innerHTML=`<h3 style="margin-top:0">${esc(campo.etiqueta)}</h3><input id="sh-val" value="${esc(v[k]||'')}" style="width:100%" onkeydown="if(event.key==='Enter')secGuardarHueco('${k}')"><div class="fl" style="gap:6px;margin-top:10px;justify-content:flex-end"><button class="b s" onclick="$('sec-hueco').classList.add('hide')">Cancelar</button><button class="b" onclick="secGuardarHueco('${k}')">Aceptar</button></div>`;
+  $('sec-hueco').classList.remove('hide');
+  setTimeout(()=>$('sh-val')?.focus(),50);
+}
+async function secGuardarHueco(k){
+  const val=$('sh-val').value.trim();
+  const {id,uid,admin}=secPrev;
+  secPrev.v[k]=val;
+  $('sec-hueco').classList.add('hide');
+  secPintarPreview();
+  await secGuardarDatos(uid,{[k]:val});
+  await secGuardarRelleno(id,uid,{[k]:val},me?.nombre||me?.usuario||'');
+}
+function secDescargarPrev(enBlanco){
+  const {d,v,uid}=secPrev;
+  if(enBlanco)return secDescargar(d.nombre+' (en blanco)',secRellenar(d.html));
+  const p=users.find(u=>u.id===uid);
+  secDescargar(d.nombre+' - '+(p?.nombre||p?.usuario||''),secRellenar(d.html,v));
+}
+
+function secRellenar1(id){
+  const d=secDocs.find(x=>x.id===id);if(!d)return;
+  $('sec-panel').innerHTML=`<div class="card" style="background:#fdfbf5"><h3 style="margin-top:0">${esc(d.nombre)}</h3>
+  <label>Persona</label><select id="sec-uid" onchange="secCargarPersona('${id}')"><option value="">— Elegir persona —</option>${users.filter(u=>!u.pendiente).map(u=>`<option value="${u.id}">${esc(u.nombre||u.usuario)}</option>`).join('')}</select>
+  <div id="sec-form" style="margin-top:8px"></div>
+  <div class="fl" style="gap:6px;margin-top:10px;flex-wrap:wrap"><button class="b s" onclick="secDescargarDoc('${id}',true)">Descargar en blanco</button><button class="b" onclick="secDescargarDoc('${id}',false)">Guardar datos y descargar</button><button class="b s" onclick="$('sec-panel').innerHTML=''">Cerrar</button></div></div>`;
+}
+async function secCargarPersona(id){const uid=$('sec-uid').value;const d=secDocs.find(x=>x.id===id);if(!uid||!d){$('sec-form').innerHTML='';return}$('sec-form').innerHTML=secFormHTML(d,await secCargarDatos(uid))}
+async function secDescargarDoc(id,enBlanco){
+  const d=secDocs.find(x=>x.id===id);if(!d)return;
+  if(enBlanco)return secDescargar(d.nombre,secRellenar(d.html));
+  const uid=$('sec-uid').value;
+  if(!uid)return dlg({title:'Elige una persona',msg:'Selecciona a quién corresponde el documento.',ok:'Vale'});
+  const v=secLeer('sec-form');
+  await secGuardarDatos(uid,v);
+  await secGuardarRelleno(id,uid,v,me?.nombre||me?.usuario||'');
+  const persona=users.find(u=>u.id===uid);
+  secDescargar(d.nombre+' - '+(persona?.nombre||persona?.usuario||''),secRellenar(d.html,v));
+}
+
+function secPanelAccesos(){
+  const act=secCodigos.filter(c=>c.activo!==false);
+  $('sec-panel').innerHTML=`<div class="card" style="background:#fdfbf5"><h3 style="margin-top:0">Accesos por código</h3>
+  <small>Cada persona tiene su código. Con él entra en la Secretaría virtual y rellena solo sus datos. Comparte el enlace o el QR.</small>
+  <div class="fl" style="gap:6px;margin:10px 0;flex-wrap:wrap"><select id="sc-user" style="flex:1;min-width:180px"><option value="">— Elegir persona —</option>${users.filter(u=>!u.pendiente).map(u=>`<option value="${u.id}">${esc(u.nombre||u.usuario)}</option>`).join('')}</select><button class="b" onclick="secNuevoCodigo()">Generar código</button></div>
+  ${act.length?act.map(c=>`<div class="fl" style="gap:6px;flex-wrap:wrap;border-top:1px solid #eee;padding:8px 0"><div style="flex:1;min-width:180px"><b>${esc(c.nombre||'')}</b><br><small>Código: <code>${esc(c.id)}</code></small></div><button class="b s" onclick="secVerQR('${c.id}')">QR / enlace</button><button class="b r" onclick="secRevocar('${c.id}')">Revocar</button></div>`).join(''):'<p style="color:#7b6a55">No hay códigos activos.</p>'}
+  <div id="sc-qr"></div>
+  <div class="fl" style="margin-top:10px"><button class="b s" onclick="$('sec-panel').innerHTML=''">Cerrar</button></div></div>`;
+}
+async function secNuevoCodigo(){
+  const uid=$('sc-user').value;if(!uid)return;
+  const u=users.find(x=>x.id===uid),nombre=u?.nombre||u?.usuario||'';
+  const code=Array.from(crypto.getRandomValues(new Uint32Array(8))).map(n=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[n%32]).join('');
+  await firebase.firestore().collection('secretariaCodigos').doc(code).set({usuarioId:uid,nombre,creado:Date.now(),activo:true});
+  secCodigos.push({id:code,usuarioId:uid,nombre,activo:true});
+  secPanelAccesos();
+}
+async function secVerQR(code){
+  const url=location.origin+location.pathname+'?sec='+code;
+  $('sc-qr').innerHTML=`<div class="fl" style="gap:12px;flex-wrap:wrap;margin-top:12px"><div id="sc-qrimg"></div><div style="flex:1;min-width:200px"><small>Enlace para la persona:</small><input readonly value="${esc(url)}" onclick="this.select()" style="width:100%"></div></div>`;
+  try{await secLib('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js');const q=qrcode(0,'M');q.addData(url);q.make();$('sc-qrimg').innerHTML=q.createImgTag(4,8)}catch(e){$('sc-qrimg').textContent='No se pudo generar el QR; usa el enlace.'}
+}
+async function secRevocar(code){
+  if(!await dlg({title:'Revocar código',msg:'Esa persona dejará de poder entrar con este código.',ok:'Revocar',cancel:'Cancelar'}))return;
+  await firebase.firestore().collection('secretariaCodigos').doc(code).update({activo:false});
+  const c=secCodigos.find(x=>x.id===code);if(c)c.activo=false;
+  secPanelAccesos();
+}
+
+// Secretaría virtual (acceso por código)
+function secAbrirCodigo(code){
+  code=String(code||'').replace(/[^A-Za-z0-9]/g,'').toUpperCase();
+  $('sec-cod').classList.remove('hide');
+  const bot=code?`secEntrarCodigo('${code}')`:"secEntrarCodigo($('sec-cod-in').value)";
+  $('sec-cod-body').innerHTML=`<div class="card"><h2>Secretaría virtual</h2>${code?'':'<label>Código de acceso</label><input id="sec-cod-in" autocomplete="off" placeholder="Ej.: AB3D9K2M" style="text-transform:uppercase">'}<div class="fl" style="gap:6px;margin-top:10px"><button class="b s" onclick="secCerrarCodigo()">Cerrar</button><button class="b" onclick="${bot}">Entrar</button></div><div id="sec-cod-panel" style="margin-top:12px"></div></div>`;
+}
+function secCerrarCodigo(){$('sec-cod').classList.add('hide');secPorta=null}
+async function secEntrarCodigo(raw){
+  const code=String(raw||'').replace(/[^A-Za-z0-9]/g,'').toUpperCase(),p=$('sec-cod-panel');
+  if(!code){p.innerHTML='<small>Escribe el código de acceso.</small>';return}
+  p.innerHTML='<small>Comprobando…</small>';
+  try{
+    const db=firebase.firestore(),c=await db.collection('secretariaCodigos').doc(code).get();
+    if(!c.exists||c.data().activo===false){secPorta=null;p.innerHTML='<p style="color:#b04a3a">Código no válido o revocado.</p>';return}
+    secPorta={codigo:code,uid:c.data().usuarioId,nombre:c.data().nombre||''};
+    const docs=(await db.collection('secretariaDocs').get()).docs.map(d=>({id:d.id,...d.data()}));
+    p.innerHTML=`<p>Hola, <b>${esc(secPorta.nombre)}</b>. Rellena tus datos: se usan en todos los documentos.</p>`+(docs.length?docs.map(d=>`<div class="card" style="margin:6px 0;padding:10px"><div class="fl" style="flex-wrap:wrap;gap:6px"><div style="flex:1;min-width:180px"><b>${esc(d.nombre)}</b><br><small>${d.carpeta?'📁 '+esc(d.carpeta)+' · ':''}${d.para?'Para: '+esc(d.para):''}</small></div>${d.tipo==='archivo'?`<a class="b s" href="${d.archivo}" download="${esc(d.nombreArchivo||'documento')}">Ver archivo</a>`:`<button class="b" onclick="secPortaAbrir('${d.id}')">Rellenar mis datos</button>`}</div></div>`).join(''):'<p>No hay documentos todavía.</p>')+'<div id="sec-porta-form"></div>';
+  }catch(e){p.innerHTML='<p style="color:#b04a3a">No se pudo comprobar el código. ('+esc(e.code||e.message)+')</p>'}
+}
+async function secPortaAbrir(id){
+  if(!secPorta)return;
+  secPorta.docId=id;
+  const d=(await firebase.firestore().collection('secretariaDocs').doc(id).get()).data();
+  $('sec-porta-form').innerHTML=`<div class="card" style="background:#fdfbf5"><h3 style="margin-top:0">${esc(d.nombre)}</h3><small>Solo se guardan tus datos personales.</small><div id="sec-porta-campos" style="margin-top:8px">${secFormHTML(d,await secCargarDatos(secPorta.uid))}</div><div class="fl" style="margin-top:10px"><button class="b" onclick="secPortaGuardar()">Guardar mis datos</button></div></div>`;
+}
+async function secPortaGuardar(){if(!secPorta)return;const v=secLeer('sec-porta-campos');await secGuardarDatos(secPorta.uid,v);if(secPorta.docId)await secGuardarRelleno(secPorta.docId,secPorta.uid,v,'La propia persona (código)');await dlg({title:'Guardado',msg:'Tus datos se han guardado.',ok:'Vale'})}
+document.addEventListener('DOMContentLoaded',()=>{const c=new URLSearchParams(location.search).get('sec');if(c){secAbrirCodigo(c);secEntrarCodigo(c)}});
+
 function fLimpiar(){
   $('frm-busq').value='';$('frm-fecha').value='';
   (fRespForm.preguntas||[]).filter(fFiltrable).forEach(p=>$('frm-op-'+p.id).value='');
@@ -1781,7 +2074,7 @@ function fCampo(p){
 }
 function fCursoEtapa(pid){
   const p=fPub.f.preguntas.find(x=>x.id===pid),et=$('fq-'+pid+'-e').value;
-  $('fq-'+pid+'-n').innerHTML='<option value="">—</option>'+fCursoNiveles(et).map(x=>`<option>${x}</option>`).join('');
+  $('fq-'+pid+'-n').innerHTML='<option value="">—</option>'+fCursoNiveles(et).filter(x=>fCursoOk(et,x)).map(x=>`<option>${x}</option>`).join('');
   $('fq-'+pid+'-g').innerHTML='<option value="">—</option>'+(et?fCursoLetras(p,et):[]).map(x=>`<option>${esc(x)}</option>`).join('');
 }
 function iniciarFormularioPublico(){
@@ -1837,10 +2130,11 @@ function fComenzar(){
 }
 function fPubForm(){
   const f=fPub.f;
-  fPubPintar(`<div class="card"><h2>${esc(f.nombre)}</h2>
-    ${(f.preguntas||[]).map(p=>`<label style="display:block;font-weight:600;margin:12px 0 4px">${esc(p.texto)}${p.obligatoria?' *':''}</label>${fCampo(p)}`).join('')}
+  fPubPintar(`<div class="card" oninput="fPubRefrescar()" onchange="fPubRefrescar()"><h2>${esc(f.nombre)}</h2>
+    ${(f.preguntas||[]).map(p=>p.tipo==='descripcion'?`<div id="fw-${p.id}" style="margin:14px 0;white-space:pre-wrap;color:#6b5a45">${esc(p.texto)}</div>`:`<div id="fw-${p.id}"><label style="display:block;font-weight:600;margin:12px 0 4px">${esc(p.texto)}${p.obligatoria?' *':''}</label>${fCampo(p)}</div>`).join('')}
     <input id="fq-web" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
     <div style="margin-top:16px"><button class="b" id="frm-enviar" onclick="fEnviarPublico('${esc(f.id)}')">Enviar</button></div><div id="frm-pub-err" style="color:#b04a3a;font-size:14px;margin-top:8px;min-height:18px"></div></div>`);
+  fPubRefrescar();
 }
 function fGracias(){
   fPubPintar(`<div class="card" style="text-align:center"><h2>¡Gracias!</h2><p>Tus respuestas a «${esc(fPub.f.nombre)}» se han enviado correctamente.</p><p><small>Ya puedes cerrar esta página.</small></p></div>`);
@@ -1860,11 +2154,13 @@ async function fEnviarPublico(id){
   }
   const mailQ=f.unaPorPersona?(f.preguntas||[]).find(p=>p.tipo==='correo'):null;let mail='';
   for(const p of f.preguntas||[]){
+    if(p.tipo==='descripcion'||!fVisible(p,f.preguntas||[]))continue;
     let v;
     if(p.tipo==='curso'){
       const g=k=>(document.getElementById('fq-'+p.id+'-'+k)||{}).value||'',e=g('e'),n=g('n'),l=g('g');
       if((e||n||l)&&!(e&&n&&l))return err('Completa el curso: etapa, nivel y grupo.');
       v=e?`${n} ${e} ${l}`:'';
+      if(e&&n&&!fCursoOk(e,n))return err('Este formulario no admite ese curso.');
     }else if(p.tipo==='escala'){v=(document.querySelector('input[name="fq-'+p.id+'"]:checked')||{}).value||''}
     else if(p.tipo==='multiple'){v=[...document.querySelectorAll('input[name="fq-'+p.id+'"]:checked')].map(x=>x.value).join(', ')}
     else{
