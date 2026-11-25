@@ -1595,10 +1595,10 @@ function pintarFInicio(){
   $('f-inicio-body').innerHTML=`<div class="card"><div class="fl"><h2 style="margin:0">Formularios</h2><button class="b" onclick="fNuevo()">+ Nuevo</button></div>`+
   (mis.length?mis.map(f=>`<div class="item" style="cursor:pointer" onclick="fResp('${f.id}')"><div><b>${esc(f.nombre)}</b><br><small>${(f.preguntas||[]).length} preguntas${f.cerrado?' · 🔒 Cerrado':''} · ${fEsCreador(f)?'Creado por ti':'Creado por '+esc(f.creador)}</small></div><span>${fNuevas(f)?`<b class="badge">${fNuevas(f)} nueva${fNuevas(f)>1?'s':''}</b> `:''}›</span></div>`).join(''):'<p style="color:#7b6a55">Todavía no hay formularios.</p>')+`</div>`;
 }
-function fNuevo(){fBorr={id:null,nombre:'',preguntas:[],verPor:[],inicio:fInicioDef(),limite:0,unaPorPersona:false,cursos:[]};go('f-edit')}
+function fNuevo(){fBorr={id:null,nombre:'',preguntas:[],verPor:[],inicio:fInicioDef(),limite:0,unaPorPersona:false,cursos:[],tipoUso:'otro',finalTxt:''};go('f-edit')}
 function fEditarForm(id){
   const f=fForms.find(x=>x.id===id);if(!f||!fPuedeEditar(f))return;
-  fBorr={id,nombre:f.nombre||'',preguntas:JSON.parse(JSON.stringify(f.preguntas||[])),verPor:[...(f.verPor||[])],limite:f.limite||0,unaPorPersona:!!f.unaPorPersona,cursos:[...(f.cursosPermitidos||[])],inicio:JSON.parse(JSON.stringify({...fInicioDef(),...(f.inicio||{}),...privDe()}))};
+  fBorr={id,nombre:f.nombre||'',preguntas:JSON.parse(JSON.stringify(f.preguntas||[])),verPor:[...(f.verPor||[])],limite:f.limite||0,unaPorPersona:!!f.unaPorPersona,cursos:[...(f.cursosPermitidos||[])],tipoUso:f.tipoUso||'otro',finalTxt:f.finalTxt||'',inicio:JSON.parse(JSON.stringify({...fInicioDef(),...(f.inicio||{}),...privDe()}))};
   go('f-edit');
 }
 function pintarFEditor(){
@@ -1676,7 +1676,7 @@ async function fGuardar(){
     if(!pc)return err('Para limitar a una respuesta por persona añade una pregunta de tipo Correo.');
     pc.obligatoria=true;
   }
-  const datos={nombre:b.nombre.trim(),preguntas:b.preguntas,verPor:b.verPor,inicio:b.inicio,limite:Math.max(0,parseInt(b.limite)||0),unaPorPersona:!!b.unaPorPersona,cursosPermitidos:b.cursos||[]};
+  const datos={nombre:b.nombre.trim(),preguntas:b.preguntas,verPor:b.verPor,inicio:b.inicio,limite:Math.max(0,parseInt(b.limite)||0),unaPorPersona:!!b.unaPorPersona,cursosPermitidos:b.cursos||[],tipoUso:b.tipoUso||'otro',finalTxt:b.finalTxt||''};
   try{
     const fdb=firebase.firestore();
     if(b.id)await fdb.collection('formularios').doc(b.id).update(datos);
@@ -1757,7 +1757,7 @@ const secLibs={};
 function secLib(url){return secLibs[url]||(secLibs[url]=new Promise((ok,ko)=>{const s=document.createElement('script');s.src=url;s.onload=ok;s.onerror=()=>{delete secLibs[url];ko(new Error('No se pudo cargar una librería necesaria. Revisa la conexión.'))};document.head.appendChild(s)}))}
 function secCampos(html){const out=[];[...String(html).matchAll(/\{\{([^}]+)\}\}/g)].forEach(m=>{const e=m[1].trim(),c=secSlug(e);if(c&&!out.some(o=>o.clave===c))out.push({clave:c,etiqueta:e})});return out}
 function secRellenar(html,v={}){return String(html).replace(/\{\{([^}]+)\}\}/g,(_,e)=>v[secSlug(e)]?esc(v[secSlug(e)]):'__________________________')}
-function secFormHTML(d,v={}){return (d.campos||[]).length?d.campos.map(c=>`<label>${esc(c.etiqueta)}</label><input data-clave="${c.clave}" value="${esc(v[c.clave]||'')}" style="width:100%">`).join(''):'<small>Este documento no tiene huecos para rellenar.</small>'}
+function secFormHTML(d,v={}){return secCamposUnicos(d).length?secCamposUnicos(d).map(c=>`<label>${esc(c.etiqueta)}</label><input data-clave="${c.clave}" value="${esc(v[c.clave]||'')}" style="width:100%">`).join(''):'<small>Este documento no tiene huecos para rellenar.</small>'}
 function secLeer(id){const o={};document.querySelectorAll('#'+id+' [data-clave]').forEach(i=>o[i.dataset.clave]=i.value.trim());return o}
 function secDescargar(nombre,html){const doc='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"></head><body style="font-family:Calibri,Arial;font-size:11pt">'+html+'</body></html>';const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+doc],{type:'application/msword'}));a.download=nombre.replace(/[\\/:*?"<>|]+/g,'').trim()+'.doc';a.click()}
 async function secCargarDatos(uid){const s=await firebase.firestore().collection('secretariaDatos').doc(uid).get();return s.exists?(s.data().valores||{}):{}}
@@ -1765,13 +1765,12 @@ async function secGuardarDatos(uid,v){const actual=await secCargarDatos(uid);awa
 
 function secSuscribir(){
   if(!secUnsub)secUnsub=firebase.firestore().collection('secretariaDocs').onSnapshot(s=>{secDocs=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));if(vista()==='sec'&&$('sec-lista'))$('sec-lista').innerHTML=secListaHTML()});
-  if(secEdit()&&!secUnsubCod)secUnsubCod=firebase.firestore().collection('secretariaCodigos').onSnapshot(s=>{secCodigos=s.docs.map(d=>({id:d.id,...d.data()}))});
 }
 function pintarSec(){
   if(!secCan()){$('sec-body').innerHTML='<div class="card">No tienes acceso a Secretaría.</div>';return}
   secSuscribir();
   $('sec-body').innerHTML=`<div class="card">
-    <div class="fl" style="margin-bottom:10px;flex-wrap:wrap;gap:6px"><h2 style="margin:0">Secretaría</h2><div class="fl" style="gap:6px;flex-wrap:wrap">${secEdit()?`<button class="b" onclick="secNuevoDoc()">＋ Subir documento</button><button class="b s" onclick="secPanelCarpeta()">＋ Carpeta</button><button class="b s" onclick="secPanelAccesos()">Accesos por código</button>`:''}<button class="b s" onclick="go('home')">Volver</button></div></div>
+    <div class="fl" style="margin-bottom:10px;flex-wrap:wrap;gap:6px"><h2 style="margin:0">Secretaría</h2><div class="fl" style="gap:6px;flex-wrap:wrap">${secEdit()?`<button class="b" onclick="secNuevoDoc()">＋ Subir documento</button><button class="b s" onclick="secPanelCarpeta()">＋ Carpeta</button><button class="b s" onclick="secPanelAccesos()">Accesos por código</button>`:''}<button class="b s" onclick="secVerArch=!secVerArch;$('sec-lista').innerHTML=secListaHTML();this.textContent=secVerArch?'Ver activos':'Ver archivados'">Ver archivados</button><button class="b s" onclick="go('home')">Volver</button></div></div>
     <div id="sec-panel"></div>
     <input type="search" id="sec-busq" placeholder="Buscar por nombre o para quién" oninput="$('sec-lista').innerHTML=secListaHTML()" style="margin-bottom:10px">
     <div id="sec-lista">${secListaHTML()}</div></div>`;
@@ -1779,13 +1778,13 @@ function pintarSec(){
 function secCan(){return can('secretaria')}
 function secListaHTML(){
   const q=secSlug($('sec-busq')?.value||'');
-  const docs=secDocs.filter(d=>!q||secSlug(d.nombre+' '+(d.para||'')).includes(q));
+  const docs=secDocs.filter(d=>(!q||secSlug(d.nombre+' '+(d.para||'')).includes(q))&&!!d.archivado===secVerArch);
   if(!docs.length)return '<p style="color:#7b6a55">No hay documentos'+(q?' con esa búsqueda':' todavía')+'.</p>';
   return [...secTodasCarpetas(),''].map(c=>{const l=docs.filter(d=>(d.carpeta||'')===c);return l.length?`<h3 style="font-size:15px;margin:14px 0 6px">📁 ${c?esc(c):'Sin carpeta'}</h3>`+l.map(secFilaHTML).join(''):''}).join('');
 }
 function secFilaHTML(d){
   const ed=secEdit();
-  return `<div class="card" style="margin:6px 0;padding:10px"><div class="fl" style="flex-wrap:wrap;gap:6px"><div style="flex:1;min-width:180px"><b>${esc(d.nombre)}</b><br><small>${d.tipo==='archivo'?'Archivo':'Plantilla con huecos'}${d.para?' · Para: '+esc(d.para):''}${d.tipo!=='archivo'?' · '+(d.campos||[]).length+' huecos':''}</small></div><div class="fl" style="gap:6px;flex-wrap:wrap">${(me?.admin||d.creadoPor===me?.id)?`<button class="b s" onclick="secDetalle('${d.id}')">Detalle</button>`:''}${d.tipo==='archivo'?`<a class="b s" href="${d.archivo}" download="${esc(d.nombreArchivo||'documento')}">Descargar</a>`:`<button class="b" onclick="secPreview('${d.id}')">Abrir</button>`}${ed?`<select onchange="secMover('${d.id}',this.value)" style="width:auto"><option value="">Sin carpeta</option>${secTodasCarpetas().map(c=>`<option ${c===d.carpeta?'selected':''}>${esc(c)}</option>`).join('')}</select><button class="b r" style="padding:6px 10px" onclick="secBorrarDoc('${d.id}')">✕</button>`:''}</div></div></div>`;
+  return `<div class="card" style="margin:6px 0;padding:10px"><div class="fl" style="flex-wrap:wrap;gap:6px"><div style="flex:1;min-width:180px"><b>${esc(d.nombre)}</b><br><small>${d.tipo==='archivo'?'Archivo':d.tipo==='escaneo'?'Escaneo':'Plantilla con huecos'}${d.para?' · Para: '+esc(d.para):''}${d.tipo!=='archivo'?' · '+(d.campos||[]).length+' huecos':''}</small></div><div class="fl" style="gap:6px;flex-wrap:wrap">${(me?.admin||d.creadoPor===me?.id)?`<button class="b s" onclick="secDetalle('${d.id}')">Detalle</button>`:''}${d.tipo==='archivo'?`<a class="b s" href="${d.archivo}" download="${esc(d.nombreArchivo||'documento')}">Descargar</a>`:`<button class="b" onclick="secPreview('${d.id}')">Abrir</button>`}${ed&&d.tipo==='escaneo'?`<button class="b s" onclick="secEditarHuecos('${d.id}')">Colocar huecos</button>`:''}${ed?`<button class="b s" onclick="secArchivarDoc('${d.id}',${!d.archivado})">${d.archivado?'Desarchivar':'Archivar'}</button>`:''}${ed?`<select onchange="secMover('${d.id}',this.value)" style="width:auto"><option value="">Sin carpeta</option>${secTodasCarpetas().map(c=>`<option ${c===d.carpeta?'selected':''}>${esc(c)}</option>`).join('')}</select><button class="b r" style="padding:6px 10px" onclick="secBorrarDoc('${d.id}')">✕</button>`:''}</div></div></div>`;
 }
 function secPanelCarpeta(){$('sec-panel').innerHTML=`<div class="card" style="background:#fdfbf5"><h3 style="margin-top:0">Nueva carpeta</h3><div class="fl" style="gap:6px"><input id="sc-nombre" placeholder="Ej.: Autorizaciones 2026-27" style="flex:1"><button class="b" onclick="secCarpetaGuardar()">Crear</button><button class="b s" onclick="$('sec-panel').innerHTML=''">Cancelar</button></div></div>`}
 async function secCarpetaGuardar(){const n=$('sc-nombre').value.trim();if(!n)return;const lista=[...secCarpetas()];if(!lista.includes(n))lista.push(n);await store.setCfg({...cfg,sec:{...(cfg.sec||{}),carpetas:lista}});$('sec-panel').innerHTML=''}
@@ -1797,7 +1796,7 @@ function secNuevoDoc(){if(!secEdit())return;$('sec-panel').innerHTML=`<div class
 <label>Carpeta</label><select id="sn-carpeta"><option value="">Sin carpeta</option>${secTodasCarpetas().map(c=>`<option>${esc(c)}</option>`).join('')}</select>
 <label>Para quién es</label><input id="sn-para" placeholder="Ej.: Familias de 1.º ESO">
 <label>Archivo</label><input id="sn-file" type="file">
-<small>Acepta Word (.docx), PDF, texto, imágenes y cualquier otro archivo de hasta 600 KB. En un Word puedes escribir huecos entre llaves dobles, por ejemplo {{Nombre del alumno}} o {{DNI}}: se convierten en campos que se rellenan en pantalla o quedan en blanco para escribir a mano. El resto de archivos se guardan para descargar tal cual.</small>
+<small>Acepta Word (.docx), PDF, texto, imágenes y cualquier otro archivo de hasta 600 KB. Las fotos y los PDF se convierten en escaneo para colocar huecos (de un PDF de varias páginas, solo se usa la primera). En un Word puedes escribir huecos entre llaves dobles, por ejemplo {{Nombre del alumno}} o {{DNI}}: se convierten en campos que se rellenan en pantalla o quedan en blanco para escribir a mano. El resto de archivos se guardan para descargar tal cual.</small>
 <div class="fl" style="gap:6px;margin-top:10px"><button class="b s" onclick="$('sec-panel').innerHTML=''">Cancelar</button><button id="sn-guardar" class="b" onclick="secGuardarNuevo()">Guardar</button></div></div>`}
 function secLeerArchivo(f){return new Promise((ok,ko)=>{const rd=new FileReader();rd.onload=()=>ok(rd.result);rd.onerror=()=>ko(new Error('No se pudo leer el archivo'));rd.readAsDataURL(f)})}
 async function secGuardarNuevo(){
@@ -1821,6 +1820,10 @@ async function secGuardarNuevo(){
       const t=await f.text();
       const html=/\.html?$/i.test(f.name)?t:t.split(/\n+/).map(l=>`<p>${esc(l)}</p>`).join('');
       doc={...base,tipo:'plantilla',html,campos:secCampos(html)};
+    }
+    if(!doc&&/\.(jpe?g|png|webp|gif|pdf)$/i.test(f.name)){
+      const src=/\.pdf$/i.test(f.name)?await secPdfAImagen(f):await secLeerArchivo(f);
+      doc={...base,tipo:'escaneo',imagen:await secAImagen(src),campos:[]};
     }
     if(!doc)doc={...base,tipo:'archivo',archivo:await secLeerArchivo(f),campos:[]};
     if(JSON.stringify(doc).length>1000000)return dlg({title:'Documento demasiado grande',msg:'Firebase admite como máximo 1 MB por documento. Reduce el archivo.',ok:'Vale'});
@@ -1848,7 +1851,7 @@ async function secDetalle(id){
   if(!(me?.admin||d.creadoPor===me?.id))return dlg({title:'Sin acceso',msg:'Solo puede ver el detalle quien creó el documento o un administrador.',ok:'Vale'});
   const snap=await firebase.firestore().collection('secretariaRellenos').where('docId','==',id).get();
   secRelActual=snap.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
-  const campos=d.campos||[];
+  const campos=secCamposUnicos(d);
   $('sec-panel').innerHTML=`<div class="card" style="background:#fdfbf5">
   <div class="fl" style="flex-wrap:wrap;gap:6px"><h3 style="margin:0;flex:1">${esc(d.nombre)}</h3><button class="b s" onclick="$('sec-panel').innerHTML=''">Cerrar</button></div>
   <small>Creado por ${esc(d.creadoPorNombre||'—')} · ${secRelActual.length} persona(s) lo han rellenado</small>
@@ -1883,7 +1886,7 @@ function secDescargarSel(id,enBlanco){
 // Vista previa del documento con huecos clicables
 let secPrev=null;
 async function secPreview(id,uidArg){
-  const d=secDocs.find(x=>x.id===id);if(!d||d.tipo!=='plantilla')return;
+  const d=secDocs.find(x=>x.id===id);if(!d||d.tipo==='archivo')return;
   const admin=!!(me?.admin||secEdit()||d.creadoPor===me?.id);
   const uid=admin?(uidArg||$('sp-uid')?.value||''):me.id;
   let v=uid?await secCargarDatos(uid):{};
@@ -1892,6 +1895,7 @@ async function secPreview(id,uidArg){
   secPintarPreview();
 }
 function secPintarPreview(){
+  if(secPrev.d.tipo==='escaneo')return secPintarScan();
   const {id,d,v,uid,admin}=secPrev;
   const html=String(d.html).replace(/\{\{([^}]+)\}\}/g,(_,e)=>{const k=secSlug(e),val=v[k];return `<span onclick="secHueco('${k}')" style="cursor:pointer;border-bottom:1px dashed #b8a27a;padding:0 4px;background:#fff7e0;${val?'':'color:#9a8a70'}">${val?esc(val):esc(e.trim())}</span>`});
   $('sec-panel').innerHTML=`<div class="card" style="background:#fdfbf5">
@@ -1918,13 +1922,203 @@ async function secGuardarHueco(k){
   $('sec-hueco').classList.add('hide');
   secPintarPreview();
   await secGuardarDatos(uid,{[k]:val});
-  await secGuardarRelleno(id,uid,{[k]:val},me?.nombre||me?.usuario||'');
+  await secGuardarRelleno(id,uid,{[k]:val},secPrev.via==='codigo'?'La propia persona (código)':(me?.nombre||me?.usuario||''));
 }
 function secDescargarPrev(enBlanco){
   const {d,v,uid}=secPrev;
+  if(d.tipo==='escaneo')return secDescargarScan(enBlanco);
   if(enBlanco)return secDescargar(d.nombre+' (en blanco)',secRellenar(d.html));
   const p=users.find(u=>u.id===uid);
   secDescargar(d.nombre+' - '+(p?.nombre||p?.usuario||''),secRellenar(d.html,v));
+}
+
+// ===== Escaneos: documento como imagen con huecos colocados =====
+let secVerArch=false,secPedirCb=null;
+function secCamposUnicos(d){return (d.campos||[]).filter((c,i,a)=>a.findIndex(x=>x.clave===c.clave)===i)}
+function secCargarImg(src){return new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>ko(new Error('No se pudo leer la imagen'));i.src=src})}
+async function secAImagen(src){
+  const img=await secCargarImg(src);
+  let ancho=1400,calidad=0.85,out='';
+  for(let k=0;k<6;k++){
+    const s=Math.min(1,ancho/img.naturalWidth);
+    const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*s);c.height=Math.round(img.naturalHeight*s);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    out=c.toDataURL('image/jpeg',calidad);
+    if(out.length<850000)break;
+    ancho=Math.round(ancho*0.8);calidad=Math.max(0.5,calidad-0.1);
+  }
+  return out;
+}
+async function secPdfAImagen(file){
+  await secLib('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+  const pg=await pdf.getPage(1);
+  const scale=1400/pg.getViewport({scale:1}).width;
+  const vp=pg.getViewport({scale});
+  const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
+  await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+  return c.toDataURL('image/jpeg',0.9);
+}
+function secPedirTexto(titulo,valor,cb){
+  $('sec-hueco-box').innerHTML=`<h3 style="margin-top:0">${esc(titulo)}</h3><input id="sh-val" value="${esc(valor||'')}" style="width:100%" onkeydown="if(event.key==='Enter')secPedirOk()"><div class="fl" style="gap:6px;margin-top:10px;justify-content:flex-end"><button class="b s" onclick="$('sec-hueco').classList.add('hide')">Cancelar</button><button class="b" onclick="secPedirOk()">Aceptar</button></div>`;
+  secPedirCb=cb;$('sec-hueco').classList.remove('hide');setTimeout(()=>$('sh-val')?.focus(),50);
+}
+function secPedirOk(){const v=$('sh-val').value.trim();$('sec-hueco').classList.add('hide');const cb=secPedirCb;secPedirCb=null;if(cb)cb(v)}
+
+// Colocar huecos (administrador o creador)
+function secEditarHuecos(id){
+  const d=secDocs.find(x=>x.id===id);if(!d)return;
+  const ps=d.campos||[];
+  $('sec-panel').innerHTML=`<div class="card" style="background:#fdfbf5">
+  <div class="fl" style="flex-wrap:wrap;gap:6px"><h3 style="margin:0;flex:1">Colocar huecos: ${esc(d.nombre)}</h3><button class="b s" onclick="$('sec-panel').innerHTML=''">Terminar</button></div>
+  <small>Toca la imagen donde va cada dato y escribe el nombre del hueco. Si pones el mismo nombre en dos sitios, se rellena igual en los dos.</small>
+  <div onclick="secColocar(event,'${id}')" style="position:relative;display:inline-block;max-width:100%;margin-top:10px;cursor:crosshair"><img src="${d.imagen}" style="display:block;max-width:100%;height:auto;pointer-events:none">${ps.map(p=>`<div style="position:absolute;left:${p.x}%;top:${p.y}%;transform:translate(-2px,-50%);background:rgba(255,247,224,.92);border:1px dashed #8a6d3b;padding:1px 6px;font-size:12px;border-radius:4px;white-space:nowrap;pointer-events:none">${esc(p.etiqueta)}</div>`).join('')}</div>
+  <div style="margin-top:10px">${ps.map((p,i)=>`<span style="display:inline-flex;align-items:center;gap:4px;margin:3px;border:1px solid #e6d9b8;border-radius:8px;padding:2px 8px;background:#fff">${esc(p.etiqueta)} <button class="b r" style="padding:0 6px" onclick="secQuitarHueco('${id}',${i})">✕</button></span>`).join('')}</div></div>`;
+}
+function secColocar(ev,id){
+  const r=ev.currentTarget.getBoundingClientRect();
+  const x=+((ev.clientX-r.left)/r.width*100).toFixed(2),y=+((ev.clientY-r.top)/r.height*100).toFixed(2);
+  secPedirTexto('Nombre del hueco (ej.: Nombre del alumno, DNI, Firma)','',async nombre=>{
+    if(!nombre)return;
+    const d=secDocs.find(x=>x.id===id);if(!d)return;
+    const campos=[...(d.campos||[]),{clave:secSlug(nombre),etiqueta:nombre,x,y}];
+    await firebase.firestore().collection('secretariaDocs').doc(id).update({campos});
+    d.campos=campos;secEditarHuecos(id);
+  });
+}
+async function secQuitarHueco(id,i){
+  const d=secDocs.find(x=>x.id===id);if(!d)return;
+  const campos=(d.campos||[]).filter((_,j)=>j!==i);
+  await firebase.firestore().collection('secretariaDocs').doc(id).update({campos});
+  d.campos=campos;secEditarHuecos(id);
+}
+
+// Vista del escaneo para rellenar (administrador, creador o persona con código)
+function secPintarScan(){
+  const {id,d,v,uid,admin}=secPrev;
+  const destino=secPrev.target||'sec-panel';
+  const marcas=(d.campos||[]).map(c=>{const val=v[c.clave];return `<button onclick="secHueco('${c.clave}')" style="position:absolute;left:${c.x}%;top:${c.y}%;transform:translate(-2px,-50%);max-width:45%;font-size:13px;padding:2px 6px;border:1px dashed #8a6d3b;background:${val?'rgba(255,255,255,.95)':'rgba(255,247,224,.92)'};color:${val?'#222':'#8a6d3b'};border-radius:4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${val?esc(val):esc(c.etiqueta)}</button>`}).join('');
+  $(destino).innerHTML=`<div class="card" style="background:#fdfbf5">
+   <div class="fl" style="flex-wrap:wrap;gap:6px"><h3 style="margin:0;flex:1">${esc(d.nombre)}</h3><button class="b s" onclick="$('${destino}').innerHTML=''">Cerrar</button></div>
+   ${admin&&!secPrev.via?`<div class="fl" style="gap:6px;margin:8px 0;flex-wrap:wrap"><select id="sp-uid" onchange="secPreview('${id}',this.value)" style="flex:1;min-width:180px"><option value="">— Elegir persona —</option>${secPersonasOpts()}</select></div>`:''}
+   <small>Toca un hueco para escribir su contenido.</small>
+   <div style="margin-top:10px;overflow:auto"><div style="position:relative;display:inline-block;max-width:100%"><img src="${d.imagen}" style="display:block;max-width:100%;height:auto">${marcas}</div></div>
+   ${admin&&uid&&!secPrev.via?`<div class="fl" style="gap:6px;margin-top:10px;flex-wrap:wrap"><button class="b s" onclick="secDescargarPrev(true)">Descargar en blanco (PDF)</button><button class="b" onclick="secDescargarPrev(false)">Descargar con estos datos (PDF)</button></div>`:''}
+  </div>`;
+  if(admin&&$('sp-uid'))$('sp-uid').value=uid;
+}
+async function secDescargarScan(enBlanco){
+  const {d,v,uid}=secPrev;
+  await secLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  const img=await secCargarImg(d.imagen);
+  const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+  const ctx=c.getContext('2d');ctx.drawImage(img,0,0);
+  ctx.font=`${Math.max(14,Math.round(c.width*0.022))}px Arial`;ctx.textBaseline='middle';ctx.fillStyle='#111';
+  (d.campos||[]).forEach(p=>{const val=enBlanco?'':(v[p.clave]||'');ctx.fillText(val||'_'.repeat(18),c.width*p.x/100,c.height*p.y/100)});
+  const p=users.find(u=>u.id===uid);
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:c.width>c.height?'l':'p',unit:'px',format:[c.width,c.height]});
+  pdf.addImage(c.toDataURL('image/jpeg',0.92),'JPEG',0,0,c.width,c.height);
+  const nombre=d.nombre+(enBlanco?' (en blanco)':' - '+(p?.nombre||p?.usuario||''));
+  pdf.save(nombre.replace(/[\\/:*?"<>|]+/g,'').trim()+'.pdf');
+}
+async function secArchivarDoc(id,archivar){
+  if(!secEdit())return;
+  await firebase.firestore().collection('secretariaDocs').doc(id).update({archivado:!!archivar});
+}
+// Códigos: archivar, reactivar y eliminar
+// ===== Códigos de Secretaría en la hoja de cálculo (Apps Script) =====
+const SEC_SCRIPT_URL='https://script.google.com/macros/s/AKfycbzE8aAjDCnLrAEpi-5JaAvVGRd7HtWGuRpA6FxSzM6GGwSs1dEfLLOFMYMUSNrvT5O8_A/exec';
+let secClaveAdmin=null;
+async function secLlamar(datos){
+  const r=await fetch(SEC_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(datos)});
+  return r.json();
+}
+async function secPedirClave(){
+  if(secClaveAdmin)return secClaveAdmin;
+  const k=await dlg({title:'Clave de administrador',msg:'Escribe la clave para gestionar los códigos. Solo se guarda mientras tengas la app abierta.',input:{type:'password',placeholder:'Clave'},ok:'Aceptar',cancel:'Cancelar'});
+  if(!k)return null;
+  secClaveAdmin=k;return k;
+}
+async function secAdm(datos){
+  const clave=await secPedirClave();if(!clave)return null;
+  const j=await secLlamar({...datos,clave});
+  if(!j.ok&&/clave/i.test(j.error||''))secClaveAdmin=null;
+  return j;
+}
+async function secCargarCodigos(){
+  const j=await secAdm({accion:'listar'});
+  if(!j)return false;
+  if(!j.ok){await dlg({title:'No se pudo cargar',msg:j.error||'Error desconocido',ok:'Vale'});return false}
+  secCodigos=j.filas;return true;
+}
+function secMostrarCodigo(code,nombre){
+  const url=location.origin+location.pathname;
+  $('sc-qr').innerHTML=`<div class="card" style="margin-top:12px;background:#fff7e0"><b>Código de ${esc(nombre)}: <span style="font-size:20px;letter-spacing:2px">${esc(code)}</span></b><br><small>Este código también queda guardado en la hoja de cálculo.</small><div class="fl" style="gap:12px;flex-wrap:wrap;margin-top:8px"><div id="sc-qrimg"></div><div style="flex:1;min-width:200px"><small>Enlace de Secretaría virtual (sin código):</small><input readonly value="${esc(url)}" onclick="this.select()" style="width:100%"></div></div></div>`;
+  secLib('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js').then(()=>{const q=qrcode(0,'M');q.addData(url);q.make();$('sc-qrimg').innerHTML=q.createImgTag(4,8)}).catch(()=>{$('sc-qrimg').textContent='No se pudo generar el QR; usa el enlace.'});
+}
+async function secPanelAccesos(){
+  if(!await secCargarCodigos())return;
+  const act=secCodigos.filter(c=>c.activo!==false),arc=secCodigos.filter(c=>c.activo===false);
+  const fila=(c,botones)=>`<div class="fl" style="gap:6px;flex-wrap:wrap;border-top:1px solid #eee;padding:8px 0"><div style="flex:1;min-width:180px"><b>${esc((c.nombre||'')+' '+(c.apellidos||''))}</b><br><small>${esc(c.correo||'')}</small><br><small>Código: <code>${esc(c.codigo||'')}</code> · ${c.activo===false?'Archivado':'Activo'}</small></div>${botones}</div>`;
+  $('sec-panel').innerHTML=`<div class="card" style="background:#fdfbf5"><h3 style="margin-top:0">Accesos por código</h3>
+  <small>Los códigos están en la hoja de cálculo. Lo que cambies aquí o en la hoja se aplica a la vez.</small>
+  <div class="fl" style="gap:6px;margin:10px 0;flex-wrap:wrap"><select id="sc-user" style="flex:1;min-width:180px"><option value="">— Elegir persona —</option>${users.filter(u=>!u.pendiente).map(u=>`<option value="${u.id}">${esc(u.nombre||u.usuario)}</option>`).join('')}</select><button class="b" onclick="secNuevoCodigo()">Generar código</button></div>
+  ${act.length?act.map(c=>fila(c,`<button class="b s" onclick="secEditarCodigo('${c.id}')">Editar</button><button class="b s" onclick="secRevocar('${c.id}')">Archivar</button>`)).join(''):'<p style="color:#7b6a55">No hay códigos activos.</p>'}
+  ${arc.length?`<details style="margin-top:10px"><summary>Archivados (${arc.length})</summary>${arc.map(c=>fila(c,`<button class="b s" onclick="secReactivar('${c.id}')">Reactivar</button><button class="b r" onclick="secEliminarCodigo('${c.id}')">Eliminar</button>`)).join('')}</details>`:''}
+  <div id="sc-qr"></div>
+  <div class="fl" style="margin-top:10px"><button class="b s" onclick="$('sec-panel').innerHTML=''">Cerrar</button></div></div>`;
+}
+async function secNuevoCodigo(){
+  const uid=$('sc-user').value;if(!uid)return;
+  const u=users.find(x=>x.id===uid);
+  const j=await secAdm({accion:'crear',usuarioApp:uid,nombre:u?.nombre||u?.usuario||'',apellidos:u?.apellidos||'',correo:u?.correo||''});
+  if(!j)return;
+  if(!j.ok)return dlg({title:'No se pudo crear',msg:j.error,ok:'Vale'});
+  await secPanelAccesos();
+  secMostrarCodigo(j.codigo,(u?.nombre||u?.usuario||''));
+}
+function secEditarCodigo(id){
+  const c=secCodigos.find(x=>x.id===id);if(!c)return;
+  $('sc-qr').innerHTML=`<div class="card" style="margin-top:12px"><b>Editar</b>
+  <label>Nombre</label><input id="ec-nom" value="${esc(c.nombre||'')}">
+  <label>Apellidos</label><input id="ec-ape" value="${esc(c.apellidos||'')}">
+  <label>Correo</label><input id="ec-cor" value="${esc(c.correo||'')}">
+  <label style="font-weight:400;display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="ec-act" style="width:auto" ${c.activo!==false?'checked':''}> Activo</label>
+  <div class="fl" style="gap:6px;margin-top:10px;flex-wrap:wrap"><button class="b" onclick="secGuardarEdicion('${id}')">Guardar</button><button class="b s" onclick="secRegenerar('${id}')">Generar código nuevo</button><button class="b s" onclick="$('sc-qr').innerHTML=''">Cancelar</button></div></div>`;
+}
+async function secGuardarEdicion(id){
+  const j=await secAdm({accion:'cambiar',id,nombre:$('ec-nom').value.trim(),apellidos:$('ec-ape').value.trim(),correo:$('ec-cor').value.trim(),activo:$('ec-act').checked});
+  if(!j)return;
+  if(!j.ok)return dlg({title:'No se guardó',msg:j.error,ok:'Vale'});
+  await secPanelAccesos();
+}
+async function secRegenerar(id){
+  if(!await dlg({title:'Generar código nuevo',msg:'El código anterior dejará de funcionar. ¿Seguro?',ok:'Generar',cancel:'Cancelar'}))return;
+  const j=await secAdm({accion:'cambiar',id,regenerar:true});
+  if(!j)return;
+  if(!j.ok)return dlg({title:'Error',msg:j.error,ok:'Vale'});
+  const c=secCodigos.find(x=>x.id===id);
+  await secPanelAccesos();
+  secMostrarCodigo(j.codigo,c?.nombre||'');
+}
+async function secRevocar(id){
+  if(!await dlg({title:'Archivar código',msg:'Esa persona dejará de poder entrar hasta que lo reactives.',ok:'Archivar',cancel:'Cancelar'}))return;
+  const j=await secAdm({accion:'cambiar',id,activo:false});
+  if(j&&!j.ok)await dlg({title:'Error',msg:j.error,ok:'Vale'});
+  await secPanelAccesos();
+}
+async function secReactivar(id){
+  const j=await secAdm({accion:'cambiar',id,activo:true});
+  if(j&&!j.ok)await dlg({title:'Error',msg:j.error,ok:'Vale'});
+  await secPanelAccesos();
+}
+async function secEliminarCodigo(id){
+  if(!await dlg({title:'Eliminar código',msg:'La fila se borra de la hoja y la persona deja de tener acceso. ¿Seguro?',ok:'Eliminar',cancel:'Cancelar'}))return;
+  const j=await secAdm({accion:'eliminar',id});
+  if(j&&!j.ok)await dlg({title:'Error',msg:j.error,ok:'Vale'});
+  await secPanelAccesos();
 }
 
 function secRellenar1(id){
@@ -1947,35 +2141,7 @@ async function secDescargarDoc(id,enBlanco){
   secDescargar(d.nombre+' - '+(persona?.nombre||persona?.usuario||''),secRellenar(d.html,v));
 }
 
-function secPanelAccesos(){
-  const act=secCodigos.filter(c=>c.activo!==false);
-  $('sec-panel').innerHTML=`<div class="card" style="background:#fdfbf5"><h3 style="margin-top:0">Accesos por código</h3>
-  <small>Cada persona tiene su código. Con él entra en la Secretaría virtual y rellena solo sus datos. Comparte el enlace o el QR.</small>
-  <div class="fl" style="gap:6px;margin:10px 0;flex-wrap:wrap"><select id="sc-user" style="flex:1;min-width:180px"><option value="">— Elegir persona —</option>${users.filter(u=>!u.pendiente).map(u=>`<option value="${u.id}">${esc(u.nombre||u.usuario)}</option>`).join('')}</select><button class="b" onclick="secNuevoCodigo()">Generar código</button></div>
-  ${act.length?act.map(c=>`<div class="fl" style="gap:6px;flex-wrap:wrap;border-top:1px solid #eee;padding:8px 0"><div style="flex:1;min-width:180px"><b>${esc(c.nombre||'')}</b><br><small>Código: <code>${esc(c.id)}</code></small></div><button class="b s" onclick="secVerQR('${c.id}')">QR / enlace</button><button class="b r" onclick="secRevocar('${c.id}')">Revocar</button></div>`).join(''):'<p style="color:#7b6a55">No hay códigos activos.</p>'}
-  <div id="sc-qr"></div>
-  <div class="fl" style="margin-top:10px"><button class="b s" onclick="$('sec-panel').innerHTML=''">Cerrar</button></div></div>`;
-}
-async function secNuevoCodigo(){
-  const uid=$('sc-user').value;if(!uid)return;
-  const u=users.find(x=>x.id===uid),nombre=u?.nombre||u?.usuario||'';
-  const code=Array.from(crypto.getRandomValues(new Uint32Array(8))).map(n=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[n%32]).join('');
-  await firebase.firestore().collection('secretariaCodigos').doc(code).set({usuarioId:uid,nombre,creado:Date.now(),activo:true});
-  secCodigos.push({id:code,usuarioId:uid,nombre,activo:true});
-  secPanelAccesos();
-}
-async function secVerQR(code){
-  const url=location.origin+location.pathname+'?sec='+code;
-  $('sc-qr').innerHTML=`<div class="fl" style="gap:12px;flex-wrap:wrap;margin-top:12px"><div id="sc-qrimg"></div><div style="flex:1;min-width:200px"><small>Enlace para la persona:</small><input readonly value="${esc(url)}" onclick="this.select()" style="width:100%"></div></div>`;
-  try{await secLib('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js');const q=qrcode(0,'M');q.addData(url);q.make();$('sc-qrimg').innerHTML=q.createImgTag(4,8)}catch(e){$('sc-qrimg').textContent='No se pudo generar el QR; usa el enlace.'}
-}
-async function secRevocar(code){
-  if(!await dlg({title:'Revocar código',msg:'Esa persona dejará de poder entrar con este código.',ok:'Revocar',cancel:'Cancelar'}))return;
-  await firebase.firestore().collection('secretariaCodigos').doc(code).update({activo:false});
-  const c=secCodigos.find(x=>x.id===code);if(c)c.activo=false;
-  secPanelAccesos();
-}
-
+async function secHash(t){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(t).toUpperCase()));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 // Secretaría virtual (acceso por código)
 function secAbrirCodigo(code){
   code=String(code||'').replace(/[^A-Za-z0-9]/g,'').toUpperCase();
@@ -1989,9 +2155,9 @@ async function secEntrarCodigo(raw){
   if(!code){p.innerHTML='<small>Escribe el código de acceso.</small>';return}
   p.innerHTML='<small>Comprobando…</small>';
   try{
-    const db=firebase.firestore(),c=await db.collection('secretariaCodigos').doc(code).get();
-    if(!c.exists||c.data().activo===false){secPorta=null;p.innerHTML='<p style="color:#b04a3a">Código no válido o revocado.</p>';return}
-    secPorta={codigo:code,uid:c.data().usuarioId,nombre:c.data().nombre||''};
+    const db=firebase.firestore();const j=await secLlamar({accion:'verificar',codigo:code});
+    if(!j.ok){secPorta=null;p.innerHTML='<p style="color:#b04a3a">Código no válido o archivado.</p>';return}
+    secPorta={codigo:code,uid:j.id,nombre:j.nombre||''};
     const docs=(await db.collection('secretariaDocs').get()).docs.map(d=>({id:d.id,...d.data()}));
     p.innerHTML=`<p>Hola, <b>${esc(secPorta.nombre)}</b>. Rellena tus datos: se usan en todos los documentos.</p>`+(docs.length?docs.map(d=>`<div class="card" style="margin:6px 0;padding:10px"><div class="fl" style="flex-wrap:wrap;gap:6px"><div style="flex:1;min-width:180px"><b>${esc(d.nombre)}</b><br><small>${d.carpeta?'📁 '+esc(d.carpeta)+' · ':''}${d.para?'Para: '+esc(d.para):''}</small></div>${d.tipo==='archivo'?`<a class="b s" href="${d.archivo}" download="${esc(d.nombreArchivo||'documento')}">Ver archivo</a>`:`<button class="b" onclick="secPortaAbrir('${d.id}')">Rellenar mis datos</button>`}</div></div>`).join(''):'<p>No hay documentos todavía.</p>')+'<div id="sec-porta-form"></div>';
   }catch(e){p.innerHTML='<p style="color:#b04a3a">No se pudo comprobar el código. ('+esc(e.code||e.message)+')</p>'}
@@ -2000,10 +2166,11 @@ async function secPortaAbrir(id){
   if(!secPorta)return;
   secPorta.docId=id;
   const d=(await firebase.firestore().collection('secretariaDocs').doc(id).get()).data();
+  if(d.tipo==='escaneo'){secPrev={id,uid:secPorta.uid,admin:false,via:'codigo',target:'sec-porta-form',d,v:await secCargarDatos(secPorta.uid)};return secPintarScan()}
   $('sec-porta-form').innerHTML=`<div class="card" style="background:#fdfbf5"><h3 style="margin-top:0">${esc(d.nombre)}</h3><small>Solo se guardan tus datos personales.</small><div id="sec-porta-campos" style="margin-top:8px">${secFormHTML(d,await secCargarDatos(secPorta.uid))}</div><div class="fl" style="margin-top:10px"><button class="b" onclick="secPortaGuardar()">Guardar mis datos</button></div></div>`;
 }
 async function secPortaGuardar(){if(!secPorta)return;const v=secLeer('sec-porta-campos');await secGuardarDatos(secPorta.uid,v);if(secPorta.docId)await secGuardarRelleno(secPorta.docId,secPorta.uid,v,'La propia persona (código)');await dlg({title:'Guardado',msg:'Tus datos se han guardado.',ok:'Vale'})}
-document.addEventListener('DOMContentLoaded',()=>{const c=new URLSearchParams(location.search).get('sec');if(c){secAbrirCodigo(c);secEntrarCodigo(c)}});
+
 
 function fLimpiar(){
   $('frm-busq').value='';$('frm-fecha').value='';
@@ -2033,6 +2200,8 @@ function fControlHTML(b){
   return `<div class="card" style="background:#fdfbf5"><h2 style="font-size:17px">Control de respuestas</h2>
   <label>Máximo de respuestas (vacío o 0 = sin límite)</label><input type="number" min="0" inputmode="numeric" placeholder="Sin límite" value="${b.limite||''}" oninput="fBorr.limite=this.value">
   <label style="font-weight:400;display:flex;gap:8px;align-items:flex-start;margin-top:12px"><input type="checkbox" style="width:auto;margin-top:3px" ${b.unaPorPersona?'checked':''} onchange="fBorr.unaPorPersona=this.checked"> <span>Solo una respuesta por persona. Se identifica por el correo @iesalbero.es, así que el formulario necesita una pregunta de tipo Correo (se marcará como obligatoria).</span></label>
+  <label>Tipo de formulario</label><select onchange="fBorr.tipoUso=this.value">${Object.entries(FTIPOUSO).map(([k,v])=>`<option value="${k}" ${(b.tipoUso||'otro')===k?'selected':''}>${v}</option>`).join('')}</select>
+  <label>Mensaje final (vacío = mensaje predeterminado de ese tipo)</label><textarea rows="3" placeholder="Ej.: Gracias. Recuerda traer la autorización firmada." oninput="fBorr.finalTxt=this.value">${esc(b.finalTxt||'')}</textarea>
   <small>Para cerrar o reabrir el formulario usa el botón de la pantalla de respuestas.</small></div>`;
 }
 function fCond(k,p,v){fBorr.inicio.condiciones[k][p]=v}
@@ -2136,8 +2305,11 @@ function fPubForm(){
     <div style="margin-top:16px"><button class="b" id="frm-enviar" onclick="fEnviarPublico('${esc(f.id)}')">Enviar</button></div><div id="frm-pub-err" style="color:#b04a3a;font-size:14px;margin-top:8px;min-height:18px"></div></div>`);
   fPubRefrescar();
 }
+const FGRACIAS_DEF={inscripcion:'Tu inscripción se ha registrado correctamente.',autorizacion:'Tu autorización se ha recibido. Gracias por tu colaboración.',encuesta:'Gracias por responder. Tu opinión nos ayuda a mejorar.',otro:'Tus respuestas se han enviado correctamente.'};
+const FTIPOUSO={inscripcion:'Inscripción',autorizacion:'Autorización',encuesta:'Encuesta',otro:'Otro'};
 function fGracias(){
-  fPubPintar(`<div class="card" style="text-align:center"><h2>¡Gracias!</h2><p>Tus respuestas a «${esc(fPub.f.nombre)}» se han enviado correctamente.</p><p><small>Ya puedes cerrar esta página.</small></p></div>`);
+  const f=fPub.f||{},txt=String(f.finalTxt||'').trim()||FGRACIAS_DEF[f.tipoUso]||FGRACIAS_DEF.otro;
+  fPubPintar(`<div class="card" style="text-align:center"><h2>¡Gracias!</h2><p style="white-space:pre-wrap">${esc(txt)}</p><p><small>Ya puedes cerrar esta página.</small></p></div>`);
 }
 async function fEnviarPublico(id){
   const err=m=>$('frm-pub-err').textContent=m;
