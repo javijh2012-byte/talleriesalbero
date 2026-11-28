@@ -1771,6 +1771,7 @@ function pintarSec(){
   secSuscribir();
   $('sec-body').innerHTML=`<div class="card">
     <div class="fl" style="margin-bottom:10px;flex-wrap:wrap;gap:6px"><h2 style="margin:0">Secretaría</h2><div class="fl" style="gap:6px;flex-wrap:wrap">${secEdit()?`<button class="b" onclick="secNuevoDoc()">＋ Subir documento</button><button class="b s" onclick="secPanelCarpeta()">＋ Carpeta</button><button class="b s" onclick="secPanelAccesos()">Accesos por código</button>`:''}<button class="b s" onclick="secVerArch=!secVerArch;$('sec-lista').innerHTML=secListaHTML();this.textContent=secVerArch?'Ver activos':'Ver archivados'">Ver archivados</button><button class="b s" onclick="go('home')">Volver</button></div></div>
+    <style>#sec-panel:not(:empty)~#sec-busq,#sec-panel:not(:empty)~#sec-lista{display:none}</style>
     <div id="sec-panel"></div>
     <input type="search" id="sec-busq" placeholder="Buscar por nombre o para quién" oninput="$('sec-lista').innerHTML=secListaHTML()" style="margin-bottom:10px">
     <div id="sec-lista">${secListaHTML()}</div></div>`;
@@ -1858,7 +1859,7 @@ async function secDetalle(id){
   <div class="fl" style="gap:6px;margin:10px 0;flex-wrap:wrap"><select id="sd-uid" style="flex:1;min-width:180px"><option value="">— Rellenar para una persona —</option>${secPersonasOpts()}</select><button class="b" onclick="secDetalleEditar('${id}')">Abrir formulario</button></div>
   <div id="sd-form"></div>
   <div style="overflow-x:auto">${secRelActual.length?`<table><thead><tr><th><input type="checkbox" onclick="document.querySelectorAll('.sd-ck').forEach(c=>c.checked=this.checked)"></th><th>Persona</th><th>Rellenado por</th><th>Fecha</th>${campos.map(c=>`<th>${esc(c.etiqueta)}</th>`).join('')}<th></th></tr></thead><tbody>${secRelActual.map(r=>`<tr><td><input type="checkbox" class="sd-ck" value="${r.uid}"></td><td>${esc(r.nombre)}</td><td>${esc(r.por||'')}</td><td>${new Date(r.fecha).toLocaleDateString('es-ES')}</td>${campos.map(c=>`<td>${esc((r.valores||{})[c.clave]||'')}</td>`).join('')}<td><button class="b s" onclick="secDetalleEditar('${id}','${r.uid}')">Editar</button></td></tr>`).join('')}</tbody></table>`:'<p style="color:#7b6a55">Nadie ha rellenado este documento todavía.</p>'}</div>
-  <div class="fl" style="gap:6px;margin-top:10px;flex-wrap:wrap"><button class="b" onclick="secDescargarSel('${id}')">Descargar seleccionados (en un solo archivo)</button><button class="b s" onclick="secDescargarSel('${id}',true)">Descargar en blanco</button></div></div>`;
+  <div class="fl" style="gap:6px;margin-top:10px;flex-wrap:wrap"><button class="b" onclick="secAbrirDescarga('${id}')">Descargar…</button><button class="b s" onclick="secDescargarSel('${id}',true)">Descargar en blanco</button></div></div>`;
 }
 async function secDetalleEditar(id,uidArg){
   const d=secDocs.find(x=>x.id===id);
@@ -2045,26 +2046,6 @@ async function secEliminarCodigo(id){
 
 // ===== Huecos: texto, firma y verificación; editables =====
 const SEC_TIPOS_HUECO={texto:'Texto',firma:'Firma',check:'Verificación (casilla)'};
-function secMarcaHTML(c,v,accion){
-  const val=v[c.clave],t=c.tipo||'texto';
-  const base=`position:absolute;left:${c.x}%;top:${c.y}%;transform:translate(-2px,-50%);cursor:pointer;`;
-  if(t==='check')return `<button onclick="${accion}" style="${base}width:26px;height:26px;padding:0;border:2px solid #8a6d3b;border-radius:4px;background:#fff;font-size:18px;line-height:20px;color:#111">${val?'✓':''}</button>`;
-  if(t==='firma')return `<button onclick="${accion}" style="${base}min-width:160px;height:60px;padding:2px;border:1px dashed #8a6d3b;background:${val?'#fff':'rgba(255,247,224,.92)'};border-radius:4px">${val?`<img src="${val}" style="max-height:54px">`:'<span style="color:#8a6d3b;font-size:13px">Firmar</span>'}</button>`;
-  return `<button onclick="${accion}" style="${base}max-width:45%;font-size:13px;padding:2px 6px;border:1px dashed #8a6d3b;background:${val?'rgba(255,255,255,.95)':'rgba(255,247,224,.92)'};color:${val?'#222':'#8a6d3b'};border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${val?esc(val):esc(c.etiqueta)}</button>`;
-}
-function secPintarScan(){
-  const {id,d,v,uid,admin}=secPrev;
-  const destino=secPrev.target||'sec-panel';
-  const marcas=(d.campos||[]).map(c=>secMarcaHTML(c,v,`secHueco('${c.clave}')`)).join('');
-  $(destino).innerHTML=`<div class="card" style="background:#fdfbf5">
-   <div class="fl" style="flex-wrap:wrap;gap:6px"><h3 style="margin:0;flex:1">${esc(d.nombre)}</h3><button class="b s" onclick="$('${destino}').innerHTML=''">Cerrar</button></div>
-   ${admin&&!secPrev.via?`<div class="fl" style="gap:6px;margin:8px 0;flex-wrap:wrap"><select id="sp-uid" onchange="secPreview('${id}',this.value)" style="flex:1;min-width:180px"><option value="">— Elegir persona —</option>${secPersonasOpts()}</select></div>`:''}
-   <small>Toca un hueco para rellenarlo.</small>
-   <div style="margin-top:10px;overflow:auto"><div style="position:relative;display:inline-block;max-width:100%"><img src="${d.imagen}" style="display:block;max-width:100%;height:auto">${marcas}</div></div>
-   ${admin&&uid&&!secPrev.via?`<div class="fl" style="gap:6px;margin-top:10px;flex-wrap:wrap"><button class="b s" onclick="secDescargarPrev(true)">Descargar en blanco (PDF)</button><button class="b" onclick="secDescargarPrev(false)">Descargar con estos datos (PDF)</button></div>`:''}
-  </div>`;
-  if(admin&&$('sp-uid'))$('sp-uid').value=uid;
-}
 function secHueco(k){
   const {d,v,uid}=secPrev;
   if(!uid)return dlg({title:'Elige una persona',msg:'Primero selecciona a quién corresponde el documento.',ok:'Vale'});
@@ -2075,17 +2056,6 @@ function secHueco(k){
   $('sec-hueco-box').innerHTML=`<h3 style="margin-top:0">${esc(campo.etiqueta)}</h3><input id="sh-val" value="${esc(v[k]||'')}" style="width:100%" onkeydown="if(event.key==='Enter')secGuardarHueco('${k}')"><div class="fl" style="gap:6px;margin-top:10px;justify-content:flex-end"><button class="b s" onclick="$('sec-hueco').classList.add('hide')">Cancelar</button><button class="b" onclick="secGuardarHueco('${k}')">Aceptar</button></div>`;
   $('sec-hueco').classList.remove('hide');
   setTimeout(()=>$('sh-val')?.focus(),50);
-}
-function secFirmaAbrir(k){
-  $('sec-hueco-box').innerHTML=`<h3 style="margin-top:0">Firma</h3><canvas id="sf-cv" width="500" height="200" style="width:100%;height:200px;border:1px solid #ccc;border-radius:8px;touch-action:none;background:#fff"></canvas><div class="fl" style="gap:6px;margin-top:10px;justify-content:space-between;flex-wrap:wrap"><button class="b s" onclick="secFirmaLimpiar()">Borrar</button><div class="fl" style="gap:6px"><button class="b s" onclick="$('sec-hueco').classList.add('hide')">Cancelar</button><button class="b" onclick="secFirmaGuardar('${k}')">Guardar firma</button></div></div>`;
-  $('sec-hueco').classList.remove('hide');
-  const cv=$('sf-cv'),ctx=cv.getContext('2d');
-  ctx.lineWidth=3;ctx.lineCap='round';ctx.strokeStyle='#111';
-  let dib=false;
-  const pos=e=>{const r=cv.getBoundingClientRect();return [(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]};
-  cv.onpointerdown=e=>{dib=true;cv.setPointerCapture(e.pointerId);const [x,y]=pos(e);ctx.beginPath();ctx.moveTo(x,y)};
-  cv.onpointermove=e=>{if(!dib)return;const [x,y]=pos(e);ctx.lineTo(x,y);ctx.stroke()};
-  cv.onpointerup=()=>{dib=false};
 }
 function secFirmaLimpiar(){const cv=$('sf-cv');cv.getContext('2d').clearRect(0,0,cv.width,cv.height)}
 async function secFirmaGuardar(k){secGuardarValor(k,$('sf-cv').toDataURL('image/png'))}
@@ -2100,17 +2070,6 @@ async function secGuardarValor(k,val){
 async function secGuardarHueco(k){secGuardarValor(k,$('sh-val').value.trim())}
 
 // Colocar y editar huecos (administrador o creador)
-function secEditarHuecos(id){
-  const d=secDocs.find(x=>x.id===id);if(!d)return;
-  const ps=d.campos||[];
-  $('sec-panel').innerHTML=`<div class="card" style="background:#fdfbf5">
-  <div class="fl" style="flex-wrap:wrap;gap:6px"><h3 style="margin:0;flex:1">Colocar huecos: ${esc(d.nombre)}</h3><button class="b s" onclick="$('sec-panel').innerHTML=''">Terminar</button></div>
-  <div class="fl" style="gap:6px;flex-wrap:wrap;margin:8px 0"><small>Al tocar la imagen se añade un hueco de este tipo:</small><select id="sh-nuevo-tipo" style="width:auto">${Object.entries(SEC_TIPOS_HUECO).map(([k,t])=>`<option value="${k}">${t}</option>`).join('')}</select></div>
-  <small>Arrastra un hueco para moverlo. Toca uno para editarlo.</small>
-  <div id="sh-lienzo" onclick="secColocar(event,'${id}')" style="position:relative;display:inline-block;max-width:100%;margin-top:8px;cursor:crosshair"><img src="${d.imagen}" style="display:block;max-width:100%;height:auto;pointer-events:none;user-select:none">${ps.map((p,i)=>`<div class="sh-m" data-i="${i}" style="position:absolute;left:${p.x}%;top:${p.y}%;transform:translate(-2px,-50%);background:rgba(255,247,224,.95);border:1px dashed #8a6d3b;padding:1px 6px;font-size:12px;border-radius:4px;white-space:nowrap;cursor:move;touch-action:none">${p.tipo==='firma'?'✍ ':p.tipo==='check'?'☑ ':''}${esc(p.etiqueta)}</div>`).join('')}</div>
-  <div id="sh-edit" style="margin-top:10px"></div></div>`;
-  secEdArrastre(id);
-}
 function secEdArrastre(id){
   const lienzo=$('sh-lienzo');let arr=null;
   lienzo.querySelectorAll('.sh-m').forEach(m=>{
@@ -2131,34 +2090,9 @@ function secEdArrastre(id){
     };
   });
 }
-function secEdPanel(id,i){
-  const d=secDocs.find(x=>x.id===id),p=d?.campos?.[i];if(!p)return;
-  $('sh-edit').innerHTML=`<div class="card" style="margin:0"><b>Editar hueco</b>
-  <div class="fl" style="gap:6px;flex-wrap:wrap;margin-top:6px"><input id="he-nom" value="${esc(p.etiqueta)}" placeholder="Nombre del hueco" style="flex:1;min-width:180px"><select id="he-tipo" style="width:auto">${Object.entries(SEC_TIPOS_HUECO).map(([k,t])=>`<option value="${k}" ${(p.tipo||'texto')===k?'selected':''}>${t}</option>`).join('')}</select></div>
-  <div class="fl" style="gap:6px;margin-top:8px;flex-wrap:wrap"><button class="b" onclick="secEdGuardar('${id}',${i})">Guardar</button><button class="b r" onclick="secQuitarHueco('${id}',${i})">Quitar hueco</button><button class="b s" onclick="$('sh-edit').innerHTML=''">Cerrar</button></div></div>`;
-}
-async function secEdGuardar(id,i){
-  const d=secDocs.find(x=>x.id===id),p=d.campos[i];
-  const nom=$('he-nom').value.trim();if(!nom)return;
-  p.etiqueta=nom;p.tipo=$('he-tipo').value;
-  await secGuardarCampos(id);
-  secEditarHuecos(id);
-}
 async function secGuardarCampos(id){
   const d=secDocs.find(x=>x.id===id);
   await firebase.firestore().collection('secretariaDocs').doc(id).update({campos:d.campos});
-}
-async function secColocar(ev,id){
-  const r=ev.currentTarget.getBoundingClientRect();
-  const x=+((ev.clientX-r.left)/r.width*100).toFixed(2),y=+((ev.clientY-r.top)/r.height*100).toFixed(2);
-  const tipo=$('sh-nuevo-tipo')?.value||'texto';
-  secPedirTexto('Nombre del hueco (ej.: Nombre del alumno, DNI, Firma)','',async nombre=>{
-    if(!nombre)return;
-    const d=secDocs.find(x=>x.id===id);if(!d)return;
-    d.campos=[...(d.campos||[]),{clave:secSlug(nombre),etiqueta:nombre,x,y,tipo}];
-    await secGuardarCampos(id);
-    secEditarHuecos(id);
-  });
 }
 async function secQuitarHueco(id,i){
   const d=secDocs.find(x=>x.id===id);if(!d)return;
@@ -2186,8 +2120,8 @@ function secConAuto(d,v,p){
   return o;
 }
 async function secQrDataURL(url){await secLib(SEC_QR_LIB);const q=qrcode(0,'M');q.addData(url);q.make();return q.createDataURL(5,8)}
-async function secPieHTML(d,p,enBlanco){
-  if((d.campos||[]).some(secEsCodigo))return '';
+async function secPieHTML(d,p,enBlanco,sinPie=false){
+  if(sinPie||(d.campos||[]).some(secEsCodigo))return '';
   const url=location.origin+location.pathname;
   const qr=await secQrDataURL(url);
   const cod=!enBlanco&&p?.codigo?`<b>${esc(p.codigo)}</b>`:'____________';
@@ -2201,45 +2135,9 @@ async function secDescargarPrev(enBlanco){
   const per=users.find(u=>u.id===uid);
   secDescargar(d.nombre+' - '+(per?.nombre||per?.usuario||''),secRellenar(d.html,secConAuto(d,v,p))+pie);
 }
-async function secDescargarScan(enBlanco){
-  const {d,v,uid,p}=secPrev;
-  await secLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-  const vals=enBlanco?{}:secConAuto(d,v,p);
-  const img=await secCargarImg(d.imagen);
-  const sinCodigo=!(d.campos||[]).some(secEsCodigo);
-  const W=img.naturalWidth,H0=img.naturalHeight,PIE=sinCodigo?Math.round(W*0.14):0;
-  const c=document.createElement('canvas');c.width=W;c.height=H0+PIE;
-  const ctx=c.getContext('2d');
-  ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0);
-  const fs=Math.max(14,Math.round(W*0.022));
-  ctx.font=`${fs}px Arial`;ctx.textBaseline='middle';ctx.fillStyle='#111';
-  for(const h of (d.campos||[])){
-    const val=vals[h.clave]||'',x=W*h.x/100,y=H0*h.y/100;
-    if(h.tipo==='check'){ctx.font=`bold ${Math.max(16,Math.round(W*0.026))}px Arial`;ctx.fillText(val?'X':'[  ]',x,y);ctx.font=`${fs}px Arial`}
-    else if(h.tipo==='firma'){
-      if(val){const im=await secCargarImg(val);const w=W*0.18,hh=w*im.naturalHeight/im.naturalWidth;ctx.drawImage(im,x,y-hh/2,w,hh)}
-      else ctx.fillText('_'.repeat(18),x,y);
-    }
-    else ctx.fillText(val||'_'.repeat(18),x,y);
-  }
-  if(sinCodigo){
-    const url=location.origin+location.pathname;
-    ctx.textBaseline='top';ctx.fillStyle='#111';ctx.font=`${fs}px Arial`;
-    ctx.fillText('Código de acceso: '+(!enBlanco&&p?.codigo?p.codigo:'____________'),W*0.04,H0+PIE*0.22);
-    ctx.font=`${Math.round(fs*0.8)}px Arial`;
-    ctx.fillText('Entra en Secretaría virtual con tu código: '+url,W*0.04,H0+PIE*0.22+fs*1.8);
-    const qi=await secCargarImg(await secQrDataURL(url));
-    const qs=PIE*0.7;ctx.drawImage(qi,W-qs-W*0.04,H0+PIE*0.12,qs,qs);
-  }
-  const per=users.find(u=>u.id===uid);
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF({orientation:c.width>c.height?'l':'p',unit:'px',format:[c.width,c.height]});
-  pdf.addImage(c.toDataURL('image/jpeg',0.92),'JPEG',0,0,c.width,c.height);
-  const nombre=d.nombre+(enBlanco?' (en blanco)':' - '+(per?.nombre||per?.usuario||''));
-  pdf.save(nombre.replace(/[\\/:*?"<>|]+/g,'').trim()+'.pdf');
-}
 async function secDescargarSel(id,enBlanco){
   const d=secDocs.find(x=>x.id===id);if(!d)return;
+  if(d.tipo==='escaneo')return secDescargarConjunto(id,enBlanco);
   if(enBlanco){const pie=await secPieHTML(d,null,true);return secDescargar(d.nombre+' (en blanco)',secRellenar(d.html)+pie)}
   const sel=[...document.querySelectorAll('.sd-ck:checked')].map(c=>c.value);
   if(!sel.length)return dlg({title:'Sin selección',msg:'Marca las personas cuyos datos quieres en el documento.',ok:'Vale'});
@@ -2251,6 +2149,243 @@ async function secDescargarSel(id,enBlanco){
     partes.push(`<div style="page-break-after:always">${secRellenar(d.html,secConAuto(d,r?.valores||{},p))}${pie}</div>`);
   }
   secDescargar(d.nombre+' - '+sel.length+' persona(s)',partes.join(''));
+}
+
+// ===== Tamaños, firma fija, código generable y huecos con tamaño =====
+const SEC_TAM={pequeno:{texto:[14,3.5],firma:[18,7],check:[3,4]},mediano:{texto:[24,4.5],firma:[26,10],check:[4,6]},grande:{texto:[38,6],firma:[38,14],check:[6,9]}};
+function secDims(c){const t=SEC_TAM.mediano[c.tipo||'texto'];return {w:+c.w||t[0],h:+c.h||t[1]}}
+function secMarcaHTML(c,v,accion){
+  const val=v[c.clave],t=c.tipo||'texto',{w,h}=secDims(c);
+  const base=`position:absolute;left:${c.x}%;top:${c.y}%;width:${w}%;height:${h}%;box-sizing:border-box;cursor:pointer;padding:0;margin:0;overflow:hidden;`;
+  if(t==='check')return `<button onclick="${accion}" style="${base}border:2px solid #8a6d3b;border-radius:4px;background:#fff;font-size:${Math.max(12,h*2.2)}px;line-height:1;color:#111">${val?'✓':''}</button>`;
+  if(t==='firma'){const src=val||c.fija;return `<button onclick="${accion}" style="${base}border:1px dashed #8a6d3b;border-radius:4px;background:${src?'#fff':'rgba(255,247,224,.92)'}">${src?`<img src="${src}" style="width:100%;height:100%;object-fit:contain">`:'<span style="color:#8a6d3b;font-size:13px">Firmar</span>'}</button>`}
+  return `<button onclick="${accion}" style="${base}border:1px dashed #8a6d3b;border-radius:4px;background:${val?'rgba(255,255,255,.95)':'rgba(255,247,224,.92)'};color:${val?'#222':'#8a6d3b'};font-size:13px;text-align:left;white-space:normal;word-break:break-word">${val?esc(val):esc(c.etiqueta)}</button>`;
+}
+function secPintarScan(){
+  const {id,d,v,uid,admin,p}=secPrev;
+  const destino=secPrev.target||'sec-panel';
+  const marcas=(d.campos||[]).map(c=>secMarcaHTML(c,v,`secHueco('${c.clave}')`)).join('');
+  const sinCodigo=admin&&uid&&!secPrev.via&&!p?.codigo;
+  $(destino).innerHTML=`<div class="card" style="background:#fdfbf5">
+   <div class="fl" style="flex-wrap:wrap;gap:6px"><h3 style="margin:0;flex:1">${esc(d.nombre)}</h3><button class="b s" onclick="$('${destino}').innerHTML=''">Cerrar</button></div>
+   ${admin&&!secPrev.via?`<div class="fl" style="gap:6px;margin:8px 0;flex-wrap:wrap"><select id="sp-uid" onchange="secPreview('${id}',this.value)" style="flex:1;min-width:180px"><option value="">— Elegir persona —</option>${secPersonasOpts()}</select></div>`:''}
+   ${admin&&uid&&!secPrev.via?`<small>Código de acceso: <b>${esc(p?.codigo||'(sin código)')}</b></small>`:''}
+   <small>Toca un hueco para rellenarlo.</small>
+   <div style="margin-top:10px;overflow:auto"><div style="position:relative;display:inline-block;max-width:100%"><img src="${d.imagen}" style="display:block;max-width:100%;height:auto">${marcas}</div></div>
+   ${admin&&uid&&!secPrev.via?`<div class="fl" style="gap:6px;margin-top:10px;flex-wrap:wrap">${sinCodigo?'<button class="b s" onclick="secGenerarCodigoPersona()">Generar código de acceso</button>':''}<button class="b s" onclick="secDescargarPrev(true)">Descargar en blanco (PDF)</button><button class="b" onclick="secDescargarPrev(false)">Descargar con estos datos (PDF)</button></div>`:''}
+  </div>`;
+  if(admin&&$('sp-uid'))$('sp-uid').value=uid;
+}
+async function secGenerarCodigoPersona(){
+  const {uid,d}=secPrev;
+  const u=users.find(x=>x.id===uid);
+  const j=await secAdm({accion:'crear',usuarioApp:uid,nombre:u?.nombre||u?.usuario||'',apellidos:u?.apellidos||'',correo:u?.correo||''});
+  if(!j)return;
+  if(!j.ok&&!/ya tiene/i.test(j.error||''))return dlg({title:'No se pudo generar',msg:j.error,ok:'Vale'});
+  await secCargarCodigos();
+  const f=secCodigos.find(x=>x.id===uid);
+  const nombre=f?((f.nombre||'')+' '+(f.apellidos||'')).trim():(u?.nombre||u?.usuario||'');
+  secPrev.p={codigo:j.codigo||f?.codigo||'',nombre:nombre||secPrev.p?.nombre||''};
+  secPrev.v=secConAuto(d,secPrev.v,secPrev.p);
+  secPintarPreview();
+}
+function secFirmaAbrir(k){secPadFirma('Firma',url=>secGuardarValor(k,url))}
+function secPadFirma(titulo,onSave){
+  $('sec-hueco-box').innerHTML=`<h3 style="margin-top:0">${esc(titulo)}</h3><canvas id="sf-cv" width="500" height="200" style="width:100%;height:200px;border:1px solid #ccc;border-radius:8px;touch-action:none;background:#fff"></canvas><div class="fl" style="gap:6px;margin-top:10px;justify-content:space-between;flex-wrap:wrap"><button class="b s" onclick="secFirmaLimpiar()">Borrar</button><div class="fl" style="gap:6px"><button class="b s" onclick="$('sec-hueco').classList.add('hide')">Cancelar</button><button class="b" id="sf-ok">Guardar firma</button></div></div>`;
+  $('sec-hueco').classList.remove('hide');
+  const cv=$('sf-cv'),ctx=cv.getContext('2d');
+  ctx.lineWidth=3;ctx.lineCap='round';ctx.strokeStyle='#111';
+  let dib=false;
+  const pos=e=>{const r=cv.getBoundingClientRect();return [(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]};
+  cv.onpointerdown=e=>{dib=true;cv.setPointerCapture(e.pointerId);const [x,y]=pos(e);ctx.beginPath();ctx.moveTo(x,y)};
+  cv.onpointermove=e=>{if(!dib)return;const [x,y]=pos(e);ctx.lineTo(x,y);ctx.stroke()};
+  cv.onpointerup=()=>{dib=false};
+  $('sf-ok').onclick=()=>{$('sec-hueco').classList.add('hide');onSave(cv.toDataURL('image/png'))};
+}
+function secFirmaFijaAbrir(id,i){
+  secPadFirma('Firma fija (la ven todas las personas)',async url=>{
+    const d=secDocs.find(x=>x.id===id);d.campos[i].fija=url;
+    await secGuardarCampos(id);secEditarHuecos(id);
+  });
+}
+async function secQuitarFija(id,i){
+  const d=secDocs.find(x=>x.id===id);delete d.campos[i].fija;
+  await secGuardarCampos(id);secEditarHuecos(id);
+}
+function secMarcaEd(p,i){
+  const {w,h}=secDims(p);
+  return `<div class="sh-m" data-i="${i}" style="position:absolute;left:${p.x}%;top:${p.y}%;width:${w}%;height:${h}%;box-sizing:border-box;background:rgba(255,247,224,.6);border:1px dashed #8a6d3b;border-radius:4px;font-size:12px;overflow:hidden;cursor:move;touch-action:none;padding:1px 3px">${p.tipo==='firma'?'✍ ':p.tipo==='check'?'☑ ':''}${esc(p.etiqueta)}</div>`;
+}
+function secEditarHuecos(id){
+  const d=secDocs.find(x=>x.id===id);if(!d)return;
+  const ps=d.campos||[];
+  $('sec-panel').innerHTML=`<div class="card" style="background:#fdfbf5">
+  <div class="fl" style="flex-wrap:wrap;gap:6px"><h3 style="margin:0;flex:1">Colocar huecos: ${esc(d.nombre)}</h3><button class="b s" onclick="$('sec-panel').innerHTML=''">Terminar</button></div>
+  <div class="fl" style="gap:6px;flex-wrap:wrap;margin:8px 0"><small>Al tocar la imagen se añade un hueco:</small><select id="sh-nuevo-tipo" style="width:auto">${Object.entries(SEC_TIPOS_HUECO).map(([k,t])=>`<option value="${k}">${t}</option>`).join('')}</select><select id="sh-nuevo-tam" style="width:auto"><option value="pequeno">Tamaño pequeño</option><option value="mediano" selected>Tamaño mediano</option><option value="grande">Tamaño grande</option></select></div>
+  <small>Arrastra un hueco para moverlo. Toca uno para cambiar su nombre, tipo, posición y tamaño.</small>
+  <div id="sh-lienzo" onclick="secColocar(event,'${id}')" style="position:relative;display:inline-block;max-width:100%;margin-top:8px;cursor:crosshair"><img src="${d.imagen}" style="display:block;max-width:100%;height:auto;pointer-events:none;user-select:none">${ps.map((p,i)=>secMarcaEd(p,i)).join('')}</div>
+  <div id="sh-edit" style="margin-top:10px"></div></div>`;
+  secEdArrastre(id);
+}
+function secEdPanel(id,i){
+  const d=secDocs.find(x=>x.id===id),p=d?.campos?.[i];if(!p)return;
+  const {w,h}=secDims(p);
+  $('sh-edit').innerHTML=`<div class="card" style="margin:0"><b>Editar hueco</b>
+  <div class="fl" style="gap:6px;flex-wrap:wrap;margin-top:6px"><input id="he-nom" value="${esc(p.etiqueta)}" placeholder="Nombre del hueco" style="flex:1;min-width:180px"><select id="he-tipo" style="width:auto">${Object.entries(SEC_TIPOS_HUECO).map(([k,t])=>`<option value="${k}" ${(p.tipo||'texto')===k?'selected':''}>${t}</option>`).join('')}</select></div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px">${[['x','Posición X (%)',p.x],['y','Posición Y (%)',p.y],['w','Ancho (%)',w],['h','Alto (%)',h]].map(([k,t,val])=>`<label style="margin:0;font-size:12px">${t}<input id="he-${k}" type="number" step="0.5" min="0" max="100" value="${val}"></label>`).join('')}</div>
+  <div class="fl" style="gap:6px;margin-top:8px;flex-wrap:wrap"><button class="b" onclick="secEdGuardar('${id}',${i})">Guardar</button>${p.tipo==='firma'?`<button class="b s" onclick="secFirmaFijaAbrir('${id}',${i})">Dibujar firma fija</button>${p.fija?`<button class="b s" onclick="secQuitarFija('${id}',${i})">Quitar firma fija</button>`:''}`:''}<button class="b r" onclick="secQuitarHueco('${id}',${i})">Quitar hueco</button><button class="b s" onclick="$('sh-edit').innerHTML=''">Cerrar</button></div>
+  <small>La posición X e Y es la esquina superior izquierda del hueco.</small></div>`;
+}
+async function secEdGuardar(id,i){
+  const d=secDocs.find(x=>x.id===id),p=d.campos[i];
+  const nom=$('he-nom').value.trim();if(!nom)return;
+  const num=(k,min,max,def)=>{const n=parseFloat($('he-'+k).value);return isNaN(n)?def:Math.min(max,Math.max(min,n))};
+  const dims=secDims(p);
+  p.etiqueta=nom;p.tipo=$('he-tipo').value;
+  p.x=num('x',0,100,p.x);p.y=num('y',0,100,p.y);
+  p.w=num('w',1,100,dims.w);p.h=num('h',1,100,dims.h);
+  await secGuardarCampos(id);
+  secEditarHuecos(id);
+}
+async function secColocar(ev,id){
+  const r=ev.currentTarget.getBoundingClientRect();
+  const x=+((ev.clientX-r.left)/r.width*100).toFixed(2),y=+((ev.clientY-r.top)/r.height*100).toFixed(2);
+  const tipo=$('sh-nuevo-tipo')?.value||'texto',tam=$('sh-nuevo-tam')?.value||'mediano';
+  const [w,h]=SEC_TAM[tam][tipo];
+  secPedirTexto('Nombre del hueco (ej.: Nombre del alumno, DNI, Firma)','',async nombre=>{
+    if(!nombre)return;
+    const d=secDocs.find(x=>x.id===id);if(!d)return;
+    d.campos=[...(d.campos||[]),{clave:secSlug(nombre),etiqueta:nombre,x,y,tipo,w,h}];
+    await secGuardarCampos(id);
+    secEditarHuecos(id);
+  });
+}
+// ===== Documento conjunto (tipo Pase) y vista de un documento sin lista =====
+async function secComponerScan(d,vals,p,enBlanco,sinPie=false){
+  const img=await secCargarImg(d.imagen);
+  const sinCodigo=!sinPie&&!(d.campos||[]).some(secEsCodigo);
+  const W=img.naturalWidth,H0=img.naturalHeight,PIE=sinCodigo?Math.round(W*0.14):0;
+  const c=document.createElement('canvas');c.width=W;c.height=H0+PIE;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0);
+  const fs=Math.max(14,Math.round(W*0.022));
+  ctx.fillStyle='#111';ctx.textAlign='left';
+  for(const campo of (d.campos||[])){
+    const {w,h}=secDims(campo);
+    const val=vals[campo.clave]||'';
+    const x=W*campo.x/100,y=H0*campo.y/100,bw=W*w/100,bh=H0*h/100;
+    if(campo.tipo==='check'){
+      ctx.strokeStyle='#111';ctx.lineWidth=Math.max(2,W*0.002);ctx.strokeRect(x,y,bw,bh);
+      if(val){ctx.font=`bold ${Math.round(bh*0.8)}px Arial`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('X',x+bw/2,y+bh/2);ctx.textAlign='left'}
+    }
+    else if(campo.tipo==='firma'){
+      const src=val||campo.fija;
+      if(src){const im=await secCargarImg(src);const r=Math.min(bw/im.naturalWidth,bh/im.naturalHeight);const iw=im.naturalWidth*r,ih=im.naturalHeight*r;ctx.drawImage(im,x+(bw-iw)/2,y+(bh-ih)/2,iw,ih)}
+    }
+    else{
+      const fsz=Math.max(10,Math.min(fs,bh*0.6));
+      ctx.font=`${fsz}px Arial`;ctx.textBaseline='middle';
+      ctx.fillText(val||'_'.repeat(Math.max(4,Math.floor(bw/(fsz*0.6)))),x+4,y+bh/2);
+    }
+  }
+  if(sinCodigo){
+    const url=location.origin+location.pathname;
+    ctx.textBaseline='top';ctx.font=`${fs}px Arial`;
+    ctx.fillText('Código de acceso: '+(!enBlanco&&p?.codigo?p.codigo:'____________'),W*0.04,H0+PIE*0.22);
+    ctx.font=`${Math.round(fs*0.8)}px Arial`;
+    ctx.fillText('Entra en Secretaría virtual con tu código: '+url,W*0.04,H0+PIE*0.22+fs*1.8);
+    const qi=await secCargarImg(await secQrDataURL(url));
+    const qs=PIE*0.7;ctx.drawImage(qi,W-qs-W*0.04,H0+PIE*0.12,qs,qs);
+  }
+  return c;
+}
+async function secDescargarScan(enBlanco){
+  const {d,v,uid,p}=secPrev;
+  await secLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  const c=await secComponerScan(d,enBlanco?{}:secConAuto(d,v,p),p,enBlanco);
+  const per=users.find(u=>u.id===uid);
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:c.width>c.height?'l':'p',unit:'px',format:[c.width,c.height]});
+  pdf.addImage(c.toDataURL('image/jpeg',0.92),'JPEG',0,0,c.width,c.height);
+  const nombre=d.nombre+(enBlanco?' (en blanco)':' - '+(per?.nombre||per?.usuario||''));
+  pdf.save(nombre.replace(/[\\/:*?"<>|]+/g,'').trim()+'.pdf');
+}
+// Un solo archivo con varias personas: seleccionadas o todas las que lo han rellenado
+// Códigos del documento conjunto: en su hueco o todos juntos al final
+async function secQrPng(url){
+  const src=await secQrDataURL(url);
+  const im=await secCargarImg(src);
+  const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;
+  c.getContext('2d').drawImage(im,0,0);
+  return c.toDataURL('image/png');
+}
+// ===== Descarga con diálogo: páginas elegidas, QR sí/no en la misma página =====
+let secDD=null;
+async function secAbrirDescarga(id){
+  const d=secDocs.find(x=>x.id===id);if(!d)return;
+  if(!secRelActual.length)return dlg({title:'Nadie lo ha rellenado',msg:'Todavía no hay datos de ninguna persona en este documento.',ok:'Vale'});
+  const lista=[];
+  for(const r of secRelActual){
+    const p=await secDatosPersona(r.uid);
+    lista.push({num:lista.length+1,uid:r.uid,p,vals:secConAuto(d,r.valores||{},p)});
+  }
+  secDD={id,lista};
+  $('sec-hueco-box').innerHTML=`<h3 style="margin-top:0">Descargar: ${esc(d.nombre)}</h3>
+  <small>Cada número es una página del documento. Marca las que quieras.</small>
+  <div style="max-height:40vh;overflow:auto;border:1px solid #eee;border-radius:8px;padding:6px;margin-top:6px">${lista.map(x=>`<label style="display:flex;gap:8px;align-items:center;margin:4px 0;font-weight:400"><input type="checkbox" class="dd-ck" value="${x.num}" checked style="width:auto">Página ${x.num}: ${esc(x.p?.nombre||'(sin nombre)')}</label>`).join('')}</div>
+  <div class="fl" style="gap:6px;margin:6px 0"><button class="b s" onclick="document.querySelectorAll('.dd-ck').forEach(c=>c.checked=true)">Todas</button><button class="b s" onclick="document.querySelectorAll('.dd-ck').forEach(c=>c.checked=false)">Ninguna</button></div>
+  <label>Código QR debajo de cada persona</label><select id="dd-qr"><option value="si" selected>Sí, en la misma página</option><option value="no">No</option></select>
+  <label>Personas por hoja</label><select id="dd-por"><option value="1" selected>1</option><option value="2">2</option><option value="4">4</option></select>
+  <div class="fl" style="gap:6px;margin-top:10px;justify-content:flex-end"><button class="b s" onclick="$('sec-hueco').classList.add('hide')">Cancelar</button><button class="b" onclick="secDescargarDialogo()">Descargar</button></div>`;
+  $('sec-hueco').classList.remove('hide');
+}
+async function secDescargarDialogo(){
+  const {id,lista}=secDD;const d=secDocs.find(x=>x.id===id);
+  const sel=[...document.querySelectorAll('.dd-ck:checked')].map(c=>+c.value);
+  if(!sel.length)return dlg({title:'Sin páginas',msg:'Marca al menos una página.',ok:'Vale'});
+  const qr=$('dd-qr').value==='si',por=+$('dd-por').value;
+  $('sec-hueco').classList.add('hide');
+  await secEmitirDocumento(d,lista.filter(x=>sel.includes(x.num)),qr,por);
+}
+async function secEmitirDocumento(d,elegidas,qr,por){
+  const base=d.nombre+(elegidas.length===1&&elegidas[0].p?.nombre?' - '+elegidas[0].p.nombre:' - conjunto');
+  if(d.tipo==='escaneo'){
+    await secLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF({unit:'pt',format:'a4',orientation:'portrait'});
+    const PW=595,PH=842,M=24,GAP=12;
+    const colsN=por===4?2:1,rowsN=por===1?1:2;
+    const cw=(PW-2*M-(colsN-1)*GAP)/colsN,ch=(PH-2*M-(rowsN-1)*GAP)/rowsN;
+    for(let i=0;i<elegidas.length;i+=por){
+      if(i>0)pdf.addPage();
+      const grupo=elegidas.slice(i,i+por);
+      for(let j=0;j<grupo.length;j++){
+        const cv=await secComponerScan(d,grupo[j].vals,grupo[j].p,false,!qr);
+        const col=j%colsN,row=Math.floor(j/colsN);
+        const x=M+col*(cw+GAP),y=M+row*(ch+GAP);
+        const sc=Math.min(cw/cv.width,ch/cv.height),w=cv.width*sc,h=cv.height*sc;
+        pdf.addImage(cv.toDataURL('image/jpeg',0.85),'JPEG',x+(cw-w)/2,y+(ch-h)/2,w,h);
+      }
+    }
+    pdf.save(base.replace(/[\\/:*?"<>|]+/g,'').trim()+'.pdf');
+    return;
+  }
+  const htmls=[];
+  for(const x of elegidas)htmls.push(secRellenar(d.html,x.vals)+await secPieHTML(d,x.p,false,!qr));
+  const cols=por===1?1:2;
+  let cuerpo='';
+  for(let i=0;i<htmls.length;i+=por){
+    const grupo=htmls.slice(i,i+por);
+    let filas='';
+    for(let j=0;j<grupo.length;j+=cols)filas+='<tr>'+grupo.slice(j,j+cols).map(h=>`<td style="width:${100/cols}%;vertical-align:top;padding:8pt">${h}</td>`).join('')+'</tr>';
+    cuerpo+=`<div style="page-break-after:always"><table style="width:100%;border-collapse:collapse">${filas}</table></div>`;
+  }
+  secDescargar(base,cuerpo);
+}
+async function secDescargarConjunto(id,enBlanco){
+  const d=secDocs.find(x=>x.id===id);if(!d)return;
+  if(enBlanco)return secEmitirDocumento(d,[{p:{},vals:{}}],true,1);
+  return secAbrirDescarga(id);
 }
 
 function secRellenar1(id){
