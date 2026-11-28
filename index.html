@@ -197,6 +197,7 @@ main.wide{max-width:1100px}
   <section id="v-propuestas" class="hide"><div id="prop-body"></div></section>
   <section id="v-admin" class="hide"><div id="admin-body"></div></section>
   <section id="v-sec" class="hide"><div id="sec-body"></div></section>
+  <section id="v-per" class="hide"><div id="per-body"></div></section>
 </main>
 </div>
 
@@ -212,8 +213,9 @@ main.wide{max-width:1100px}
 </div>
 <div id="hmodal" class="ov hide"><div class="card">
   <h2 id="hm-tit">Nuevo horario</h2>
-  <label>Tipo de horario</label><select id="hm-tipo" onchange="hmTipo()"><option value="profesor">Profesor (clases, guardias y jefatura)</option><option value="grupo">Grupo de alumnos (solo asignaturas)</option></select>
+  <label>Tipo de horario</label><select id="hm-tipo" onchange="hmTipo();$('hm-user-row').classList.toggle('hide',$('hm-tipo').value!=='profesor')"><option value="profesor">Profesor (clases, guardias y jefatura)</option><option value="grupo">Grupo de alumnos (solo asignaturas)</option></select>
   <label id="hm-nom-lbl">Nombre</label><input id="hm-nom" placeholder="Ej: Javier" autocomplete="off">
+  <div id="hm-user-row"><label>Usuario de la app (puede editar su propio horario)</label><select id="hm-user"></select></div>
   <div id="hm-curso-row" class="hide"><label>Curso</label><input id="hm-curso" placeholder="Ej: 1º ESO A" autocomplete="off"></div>
   <div id="hm-asig-row" class="hide"><label>Asignaturas y profesor</label><div id="hm-asig"></div><button class="b s" type="button" style="margin-top:8px" onclick="addAsigFila()">+ Añadir asignatura</button></div>
   <div class="bar"><button class="b s" onclick="$('hmodal').classList.add('hide')">Cancelar</button><button class="b r hide" id="hm-del" onclick="borrarHorario()">Eliminar</button><button class="b" onclick="guardarHorario()">Guardar</button></div>
@@ -469,7 +471,7 @@ async function pedirAdmin(){
 }
 
 /* ---------- Navegación ---------- */
-const VIEWS=['home','lists','create','detail','e-fill','e-resp','e-edit','s-buscar','s-crear','s-perfil','propuestas','admin','h-lista','h-ver','f-inicio','f-edit','f-resp','sec'];
+const VIEWS=['home','lists','create','detail','e-fill','e-resp','e-edit','s-buscar','s-crear','s-perfil','propuestas','admin','h-lista','h-ver','f-inicio','f-edit','f-resp','sec','per'];
 const gate=v=>(['lists','create','detail'].includes(v)&&!(appOn('listados')&&can('listados')))||(v.startsWith('e-')&&!(appOn('encuestas')&&can('encuestas')))||(v.startsWith('s-')&&!(appOn('socios')&&can('socios')))||(v.startsWith('h-')&&!appOn('horarios'));
 function go(v){
   if(me&&gate(v))v='home';
@@ -483,7 +485,7 @@ function go(v){
   if(v.startsWith('e-')){$('e-b-resp').classList.toggle('hide',!can('ver_respuestas'));$('e-b-edit').classList.toggle('hide',!can('editar_preguntas'))}
   if(v==='h-lista')pintarHLista();if(v==='h-ver')pintarHVer();
   if(v==='f-inicio')pintarFInicio();if(v==='f-edit')pintarFEditor();if(v==='f-resp')pintarFResp();
-  if(v==='home')pintarHome();if(v==='sec')pintarSec();if(v==='propuestas')pintarProp();if(v==='admin')pintarAdmin();if(v==='e-fill')pintarForm();if(v==='e-resp')pintarResp();if(v==='e-edit')pintarPreg();if(v==='s-buscar')buscarSocios();if(v==='s-crear')resetCrearSocio();if(v==='s-perfil')pintarPerfil();
+  if(v==='home')pintarHome();if(v==='sec')pintarSec();if(v==='per')pintarPer();if(v==='propuestas')pintarProp();if(v==='admin')pintarAdmin();if(v==='e-fill')pintarForm();if(v==='e-resp')pintarResp();if(v==='e-edit')pintarPreg();if(v==='s-buscar')buscarSocios();if(v==='s-crear')resetCrearSocio();if(v==='s-perfil')pintarPerfil();
 }
 let logoNuevo='';
 function subirLogo(inp){
@@ -789,7 +791,7 @@ function pintarFirmas(l){
 }
 
 /* ---------- Usuarios, apps y encuestas ---------- */
-const PERMS=[['listados','Listados: usar (ver, marcar y rellenar las listas a las que tiene acceso)'],['listados_editar','Listados: crear y editar (listas, columnas y ajustes)'],['listados_eliminar','Listados: eliminar listas'],['listados_enlaces','Listados: gestionar enlaces compartidos'],['encuestas','Encuestas: usar (responder y ver el historial)'],['encuestas_editar','Encuestas: crear y editar preguntas'],['encuestas_eliminar','Encuestas: eliminar respuestas'],['socios','Socios: usar (buscar, ver y editar datos)'],['socios_crear','Socios: crear (socios, productos, tarjetas y quitar productos de cuentas)'],['socios_eliminar','Socios: eliminar socios'],['horarios_editar','Horarios: crear, editar y eliminar'],['gestionar_propuestas','Ver y gestionar propuestas'],['gestionar_usuarios','Gestionar usuarios'],['gestionar_apps','Activar/desactivar apps y ajustes de Encuestas'],['privacidad_editar','Privacidad y consentimientos: editar los textos de todos los formularios'],['formularios_eliminar','Formularios: eliminar respuestas'],['secretaria','Secretaría: ver documentos y entrar en la sección'],['secretaria_editar','Secretaría: subir documentos y carpetas, generar códigos de acceso y rellenar y descargar documentos']];
+const PERMS=[['listados','Listados: usar (ver, marcar y rellenar las listas a las que tiene acceso)'],['listados_editar','Listados: crear y editar (listas, columnas y ajustes)'],['listados_eliminar','Listados: eliminar listas'],['listados_enlaces','Listados: gestionar enlaces compartidos'],['encuestas','Encuestas: usar (responder y ver el historial)'],['encuestas_editar','Encuestas: crear y editar preguntas'],['encuestas_eliminar','Encuestas: eliminar respuestas'],['socios','Socios: usar (buscar, ver y editar datos)'],['socios_crear','Socios: crear (socios, productos, tarjetas y quitar productos de cuentas)'],['socios_eliminar','Socios: eliminar socios'],['horarios_editar','Horarios: crear, editar y eliminar'],['gestionar_propuestas','Ver y gestionar propuestas'],['gestionar_usuarios','Gestionar usuarios'],['gestionar_apps','Activar/desactivar apps y ajustes de Encuestas'],['privacidad_editar','Privacidad y consentimientos: editar los textos de todos los formularios'],['formularios_eliminar','Formularios: eliminar respuestas'],['secretaria','Secretaría: ver documentos y entrar en la sección'],['secretaria_editar','Secretaría: subir documentos y carpetas, generar códigos de acceso y rellenar y descargar documentos'],['politicas_editar','Políticas y atención: editar los textos de privacidad, cookies y atención al usuario'],['personas_editar','Personas: crear y editar datos (los datos privados solo los ven administradores y profesores)']];
 const TIPOS={texto:'Texto',numero:'Número',test:'Test (una sola opción)',multiple:'Varias opciones',correo:'Correo @iesalbero.es',curso:'Curso y grupo'};
 const ALIAS={editar_columnas:'listados_editar',ajustes_listados:'listados_editar',eliminar_listas:'listados_eliminar',ver_respuestas:'encuestas',editar_preguntas:'encuestas_editar',eliminar_respuestas:'encuestas_eliminar',socios_cuenta:'socios_crear',socios_productos:'socios_crear',socios_tarjetas:'socios_crear',socios_editar:'socios',socios_borrar:'socios_eliminar'};
 const canon=p=>ALIAS[p]||p;
@@ -844,6 +846,7 @@ function pintarHome(){
   if(appOn('encuestas')&&can('encuestas'))c.push(['❓','Encuestas',"go('e-fill')"]);
   c.push(['📝','Formularios',"go('f-inicio')",fNuevasTotal()]);
   if(can('secretaria'))c.push(['🗂️','Secretaría',"go('sec')"]);
+  c.push(['👥','Personas',"go('per')"]);
   if(appOn('horarios'))c.push(['🕒','Horarios',"go('h-lista')"]);
   c.push(['⚙️','Ajustes',"go('admin')"]);
   const pend=can('gestionar_propuestas')?propuestas.filter(x=>x.estado!=='hecha').length:0;
@@ -864,7 +867,8 @@ function pintarAdmin(){
     <label class="b s" style="display:block;text-align:center;margin-top:8px;cursor:pointer">⬆ Restaurar desde una copia<input type="file" accept=".json,application/json" class="hide" onchange="copiaRestaurar(this)"></label>`]);
   if(can('privacidad_editar'))S.push(['priv','🔒','Privacidad y consentimientos',privAdminHtml()]);
   if(can('gestionar_usuarios'))S.push(['solic','🔐','Solicitudes',solicHtml()]);
-  if(can('gestionar_usuarios'))S.push(['users','👥','Usuarios',`<div class="fl"><small style="color:#6b5a45">Crea, edita, habilita o deshabilita usuarios y sus permisos.</small><button class="b" onclick="editUser()">Nuevo</button></div>`+users.slice().sort((a,b)=>(a.usuario||'').localeCompare(b.usuario||'')).map(u=>`<div class="item" onclick="editUser('${u.id}')"><div><b>${esc(u.nombre||u.usuario)}</b><br><small>${esc(u.usuario)}${u.admin?' · administrador':''}${u.activo===false?(u.pendiente?' · pendiente':' · deshabilitado'):''}</small></div><span>›</span></div>`).join('')]);
+  if(can('politicas_editar'))S.push(['pol','📜','Políticas y atención',polAdminHtml()]);
+  if(can('gestionar_usuarios'))S.push(['hist','📋','Historial',histHtml()]);
   if(appOn('socios')&&(can('socios_productos')||can('socios_tarjetas')))S.push(['socios','🛒','Socios',(can('socios_productos')?'<button class="b s" style="width:100%;margin-top:4px" onclick="abrirProdAjustes()">🏷️ Crear y editar productos</button>':'')+(can('socios_tarjetas')?'<button class="b s" style="width:100%;margin-top:8px" onclick="abrirTarjetas()">🖨️ Generar documento de tarjetas</button>':'')]);
   S.push(['listados','📋','Listados','<button class="b s" style="width:100%;margin-top:4px" onclick="openSettings()">Abrir ajustes de Listados</button>']);
   if(can('gestionar_apps'))S.push(['enc','❓','Encuestas',`<label>Título de la encuesta</label><input id="e-titulo" value="${esc(cfg.enc_titulo||'')}"><label>Mensaje al terminar</label><input id="e-gracias" value="${esc(cfg.enc_gracias||'')}"><button class="b" style="margin-top:12px;width:100%" onclick="guardarEnc()">Guardar</button>`]);
@@ -911,7 +915,7 @@ async function cambiarPass(){
   if(!okA){await dlg({title:'Contraseña incorrecta',msg:'La contraseña actual no coincide.'});return}
   if(n.length<3){await dlg({title:'Contraseña muy corta',msg:'Usa al menos 3 caracteres.'});return}
   if(n!==r){await dlg({title:'No coinciden',msg:'Las dos contraseñas nuevas deben ser iguales.'});return}
-  try{await gs.upd('usuarios',me.id,{...(await mkPass(n)),pass:delField()})}catch(e){await dlg({title:'No se pudo guardar',msg:String(e.code||e.message||e)});return}
+  try{await gs.upd('usuarios',me.id,{...(await mkPass(n)),pass:delField()});histLog('Contraseña','Cambió su contraseña: '+(me.nombre||me.usuario))}catch(e){await dlg({title:'No se pudo guardar',msg:String(e.code||e.message||e)});return}
   ['m-act','m-new','m-rep'].forEach(i=>$(i).value='');
   await dlg({title:'Contraseña cambiada',msg:'La próxima vez entra con la nueva.'});
 }
@@ -942,7 +946,7 @@ async function guardarUser(){
   let cred;
   try{cred=pass?await mkPass(pass):(old.hash?{salt:old.salt,hash:old.hash}:(old.pass?{pass:old.pass}:{}))}
   catch(er){await dlg({title:'No se pudo cifrar',msg:'Abre la app con https para poder guardar contraseñas.'});return}
-  gs.set('usuarios',id,{usuario:old.usuario||usuario,nombre:$('u-nombre').value.trim()||usuario,...cred,correo:$('u-correo').value.trim().toLowerCase(),telefono:$('u-tel').value.trim(),...(old.creado?{creado:old.creado}:{}),pendiente:!!old.pendiente&&!$('u-activo').checked,
+  histLog('Cuenta',(id?'Modificada: ':'Nueva: ')+$('u-nombre').value.trim());gs.set('usuarios',id,{usuario:old.usuario||usuario,nombre:$('u-nombre').value.trim()||usuario,...cred,correo:$('u-correo').value.trim().toLowerCase(),telefono:$('u-tel').value.trim(),...(old.creado?{creado:old.creado}:{}),pendiente:!!old.pendiente&&!$('u-activo').checked,
     admin:id==='admin'?true:(self?!!old.admin:(me.admin?$('u-admin').checked:!!old.admin)),activo:id==='admin'?true:(self?old.activo!==false:$('u-activo').checked),permisos:self?(old.permisos||{}):permisos});
   const habil=!!old.pendiente&&$('u-activo').checked,tel=$('u-tel').value.trim(),nom=$('u-nombre').value.trim()||usuario,mail=$('u-correo').value.trim().toLowerCase();
   $('usermodal').classList.add('hide');
@@ -952,7 +956,7 @@ async function borrarUser(){
   if(!await dlg({title:'Eliminar usuario',msg:'Se eliminará este usuario. ¿Seguro?',ok:'Eliminar',cancel:'Cancelar'}))return;
   const uDel=users.find(x=>x.id===editId);
   if(uDel)try{await gs.set('usuariosArchivo',uDel.id,{usuario:uDel.usuario||uDel.id,nombre:uDel.nombre||'',correo:uDel.correo||'',telefono:uDel.telefono||'',archivado:Date.now(),archivadoPor:me.id})}catch(e){dbFail(e)}
-  gs.del('usuarios',editId);$('usermodal').classList.add('hide');
+  histLog('Cuenta','Baja: '+(users.find(u=>u.id===editId)?.usuario||editId));gs.del('usuarios',editId);$('usermodal').classList.add('hide');
 }
 
 /* ---------- Cuentas: olvido de contraseña y registro ---------- */
@@ -1006,7 +1010,8 @@ function solicHtml(){
   const bloqueP=pend.length?`<b style="display:block;margin:4px 0 6px">Cuentas nuevas por activar</b>`+pend.map(u=>`<div class="item" onclick="editUser('${u.id}')"><div><b>${esc(u.nombre||u.usuario)}</b><br><small>${esc(u.usuario)} · ${esc(u.correo||'')} · ${esc(u.telefono||'')}</small></div><span>›</span></div>`).join(''):'';
   const bloqueS=sol.length?`<b style="display:block;margin:12px 0 6px">Contraseñas olvidadas</b>`+sol.map(x=>`<div class="item" onclick="resolverSol('${x.id}')"><div><b>${esc(x.nombre)}</b><br><small>${esc(x.correo)} · ${esc(x.telefono||'')} · ${esc(x.fecha||'')}${x.estado==='enlace'?' · enlace enviado, sin usar':''}</small></div><span>›</span></div>`).join(''):'';
   const bloqueH=hist.length?`<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">Historial (${hist.length})</summary>`+hist.map(x=>`<div style="padding:6px 0;border-bottom:1px solid var(--line);font-size:13px"><b>${esc(x.nombre)}</b> · ${esc(x.correo)} · ${esc(x.telefono||'')}<br><small>${esc(x.fecha||'')}${x.usada?' · usada '+esc(x.usada):''}</small></div>`).join('')+`</details>`:'';
-  return (bloqueP+bloqueS+bloqueH)||'<small style="color:#7b6a55">No hay solicitudes pendientes.</small>';
+  const bloqueM=mensajesAtHtml();
+  return (bloqueP+bloqueS+bloqueM+bloqueH)||'<small style="color:#7b6a55">No hay solicitudes pendientes.</small>';
 }
 function resolverSol(id){
   const s=solicitudes.find(x=>x.id===id);if(!s)return;
@@ -1028,9 +1033,23 @@ async function generarEnlace(id){
   try{await gs.upd('solicitudes',id,{estado:'enlace',token,usuarioId:u.id,expira:Date.now()+86400000,gestionadoPor:me.id,enlaceFecha:new Date().toLocaleString('es-ES')})}
   catch(e){dbFail(e);await dlg({title:'No se pudo generar',msg:String(e.code||e)});return}
   const url=location.origin+location.pathname+'?r='+token;
-  mensajeEnvio({titulo:'Enlace temporal',texto:`Hola ${s.nombre}, este es tu enlace para crear una contraseña nueva en la app del taller del IES Albero. Sirve una sola vez y caduca en 24 horas:
+  histLog('Contraseña','Enlace de restablecimiento para '+s.nombre+' (cuenta '+(u.usuario||u.id)+')');
+  mensajeEnvio({titulo:'Enlace temporal',texto:`Hola ${s.nombre},
+
+Soy ${me?.nombre||me?.usuario||'el administrador'}.
+
+Has solicitado restablecer tu contraseña en el software de gestión del taller del IES Albero.
+
+Usuario: ${u.usuario||u.id}
+Nombre y apellidos: ${s.nombre}
+Correo: ${s.correo||'—'}
+
+Enlace para crear una contraseña nueva (válido 24 horas y solo se puede utilizar una vez):
 ${url}
-Tu usuario es: ${u.usuario||u.id}`,telefono:s.telefono,correo:s.correo,asunto:'Nueva contraseña - Taller IES Albero'});
+
+Un cordial saludo.
+
+Cualquier problema, contacta con el servicio de atención al usuario desde la página de inicio.`,telefono:s.telefono,correo:s.correo,asunto:'Nueva contraseña - Taller IES Albero'});
 }
 /* Página pública del enlace temporal (?r=...) */
 let _rec=null;
@@ -1362,7 +1381,9 @@ async function borrarProp(id){
 const DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes'];
 const FRANJAS=[{n:'1ª hora',i:'8:15',f:'9:15'},{n:'2ª hora',i:'9:15',f:'10:15'},{n:'3ª hora',i:'10:15',f:'11:15'},{n:'Recreo',i:'11:15',f:'11:45',r:true},{n:'4ª hora',i:'11:45',f:'12:45'},{n:'5ª hora',i:'12:45',f:'13:45'},{n:'6ª hora',i:'13:45',f:'14:45'}];
 let horarios=[],hCur=null,hCell=null,hEditId=null,hQ='';
-const hEdit=()=>can('horarios_editar');
+const esTotal=()=>!!me&&(me.admin||PERMS.every(p=>can(p[0])));
+const hEditYo=x=>!!x&&x.tipo==='profesor'&&!!me&&x.usuarioId===me.id&&!esTotal();
+const hEdit=x=>can('horarios_editar')||hEditYo(x);
 gs.sub('horarios',a=>{horarios=a;if(me){const v=vista();if(v==='h-lista')pintarHLista();if(v==='h-ver')pintarHVer()}});
 function pintarHLista(){
   const q=hQ.trim().toLowerCase();
@@ -1373,6 +1394,7 @@ function pintarHLista(){
 function abrirHorario(id){hCur=id;go('h-ver')}
 function celdaHtml(x,c){
   if(!c)return'';
+  if(c.t==='noesta')return'<b>No está</b>';
   if(c.t==='guardia')return`<b>Guardia</b>${c.a?`<br><small>${esc(c.a)}</small>`:''}`;
   if(c.t==='jefatura')return`<b>Jefatura</b>${c.a?`<br><small>${esc(c.a)}</small>`:''}`;
   const sub=x.tipo==='profesor'?c.g:c.p;
@@ -1389,20 +1411,20 @@ function pintarHVer(){
   const x=horarios.find(y=>y.id===hCur),b=$('h-ver-body');
   if(!x){b.innerHTML='<div class="card"><button class="b s" onclick="go(\'h-lista\')">Volver</button><p style="color:#7b6a55">Cargando el horario… Si no aparece, puede que se haya eliminado.</p></div>';return}
   const w0=b.querySelector('.hwrap'),sy=w0?w0.scrollTop:0,sx=w0?w0.scrollLeft:0;
-  const ed=hEdit(),prof=x.tipo==='profesor';
+  const ed=hEdit(x),prof=x.tipo==='profesor';
   const rows=FRANJAS.map((f,h)=>f.r
     ?`<tr class="hr"><th class="hc">${f.i}–${f.f}</th><td colspan="5">${f.n}</td></tr>`
     :`<tr><th class="hc"><b>${f.n}</b><br><small>${f.i}–${f.f}</small></th>${DIAS.map((_,d)=>{const c=(x.celdas||{})[d+'_'+h];return`<td class="hcell ${c?c.t:''} ${ed?'ed':''}" ${ed?`onclick="editCelda(${d},${h})"`:''}>${celdaHtml(x,c)}</td>`}).join('')}</tr>`).join('');
-  b.innerHTML=`<div class="card" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><button class="b s" onclick="go('h-lista')">Volver</button><span style="display:flex;gap:8px;flex-wrap:wrap">${ed?'<button class="b s" onclick="editHorario(hCur)">Editar datos</button>':''}<button class="b" onclick="horarioPDF()">Descargar PDF</button></span></div>
+  b.innerHTML=`<div class="card" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><button class="b s" onclick="go('h-lista')">Volver</button><span style="display:flex;gap:8px;flex-wrap:wrap">${can('horarios_editar')?'<button class="b s" onclick="editHorario(hCur)">Editar datos</button>':''}<button class="b" onclick="horarioPDF()">Descargar PDF</button></span></div>
   <div class="card"><h2>Horario de ${esc(x.nombre)}</h2><p style="margin:0 0 12px;color:#7b6a55">${prof?'Profesor':'Grupo de alumnos'} · Curso ${esc(cfg.year)}${ed?' · Toca un hueco para rellenarlo':''}</p>
   <div class="hwrap"><table class="ht"><thead><tr><th class="hc">Hora</th>${DIAS.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
   const w1=b.querySelector('.hwrap');w1.scrollTop=sy;w1.scrollLeft=sx;
 }
 function editCelda(d,h){
-  const x=horarios.find(y=>y.id===hCur);if(!x||!hEdit())return;
+  const x=horarios.find(y=>y.id===hCur);if(!x||!hEdit(x))return;
   hCell=d+'_'+h;const c=(x.celdas||{})[hCell]||{t:'clase'},prof=x.tipo==='profesor';
   $('hc-tit').textContent=`${DIAS[d]} · ${FRANJAS[h].n} (${FRANJAS[h].i}–${FRANJAS[h].f})`;
-  $('hc-tipo').innerHTML='<option value="clase">Clase</option>'+(prof?'<option value="guardia">Guardia</option><option value="jefatura">Jefatura</option>':'');
+  $('hc-tipo').innerHTML='<option value="clase">Clase</option>'+(prof?'<option value="guardia">Guardia</option><option value="jefatura">Jefatura</option><option value="noesta">No está</option>':'');
   $('hc-tipo').value=c.t||'clase';$('hc-a').value=c.a||'';$('hc-g').value=c.g||'';$('hc-p').value=c.p||'';
   const u=k=>[...new Set(horarios.flatMap(y=>Object.values(y.celdas||{}).map(z=>z[k]).filter(Boolean)).concat(k==='p'?horarios.filter(y=>y.tipo==='profesor').map(y=>y.nombre):[]).concat(k==='g'?horarios.filter(y=>y.tipo==='grupo').map(y=>y.nombre):[]))].sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}));
   const dl=(id,L)=>$(id).innerHTML=L.map(v=>`<option value="${esc(v)}">`).join('');
@@ -1419,18 +1441,18 @@ function hcTipo(){
 }
 const hcLista=(x,t)=>!!x&&x.tipo==='grupo'&&t==='clase'&&(x.asignaturas||[]).length>0;
 async function guardarCelda(){
-  const x=horarios.find(y=>y.id===hCur);if(!x||!hEdit())return;
+  const x=horarios.find(y=>y.id===hCur);if(!x||!hEdit(x))return;
   const t=$('hc-tipo').value,lista=hcLista(x,t);
   let a=$('hc-a').value.trim(),g=$('hc-g').value.trim(),p=$('hc-p').value.trim();
   if(lista){a=$('hc-as').value;p=((x.asignaturas||[]).find(z=>z.a===a)||{}).p||''}
   if(t==='clase'&&!a){await dlg({title:'Falta la asignatura',msg:lista?'Elige la asignatura de la lista.':'Escribe la asignatura de este hueco.'});return}
   const celdas={...(x.celdas||{})};
-  celdas[hCell]=t==='clase'?(x.tipo==='profesor'?{t,a,g}:{t,a,p}):{t,a};
+  celdas[hCell]=t==='clase'?(x.tipo==='profesor'?{t,a,g}:{t,a,p}):{t,a:t==='noesta'?'':a};
   $('hcmodal').classList.add('hide');
   gs.upd('horarios',hCur,{celdas}).catch(dbFail);
 }
 function borrarCelda(){
-  const x=horarios.find(y=>y.id===hCur);if(!x||!hEdit())return;
+  const x=horarios.find(y=>y.id===hCur);if(!x||!hEdit(x))return;
   const celdas={...(x.celdas||{})};delete celdas[hCell];
   $('hcmodal').classList.add('hide');
   gs.upd('horarios',hCur,{celdas}).catch(dbFail);
@@ -1439,6 +1461,8 @@ function editHorario(id){
   if(!hEdit())return;
   hEditId=id||null;const x=id?horarios.find(y=>y.id===id):{tipo:'profesor',nombre:''};if(!x)return;
   $('hm-tit').textContent=id?'Editar horario':'Nuevo horario';
+  $('hm-user').innerHTML='<option value="">— Ninguno —</option>'+users.filter(u=>!u.pendiente).map(u=>`<option value="${u.id}">${esc(u.nombre||u.usuario)}</option>`).join('');
+  $('hm-user').value=x.usuarioId||'';$('hm-user-row').classList.toggle('hide',x.tipo!=='profesor');
   $('hm-tipo').value=x.tipo;$('hm-tipo').disabled=!!id;$('hm-nom').value=x.alumno||x.nombre||'';$('hm-curso').value=x.curso||'';
   $('hm-asig').innerHTML='';(x.asignaturas||[]).forEach(z=>addAsigFila(z.a,z.p));
   rellenarDL();hmTipo();
@@ -1470,6 +1494,7 @@ async function guardarHorario(){
     if(!asig.length){await dlg({title:'Faltan asignaturas',msg:'Añade al menos una asignatura con su profesor.'});return}
     extra={alumno:nombre,curso,asignaturas:asig};nombre=`${nombre} · ${curso}`;
   }
+  if(tipo==='profesor')extra={usuarioId:$('hm-user').value||null};
   if(!nombre){await dlg({title:'Falta el nombre',msg:'Escribe el nombre del profesor.'});return}
   if(horarios.some(y=>y.id!==hEditId&&y.tipo===tipo&&(y.nombre||'').toLowerCase()===nombre.toLowerCase())){await dlg({title:'Ya existe',msg:'Ya hay un horario con ese nombre.'});return}
   $('hmodal').classList.add('hide');
@@ -1967,6 +1992,7 @@ async function secPedirClave(){
 async function secAdm(datos){
   const clave=await secPedirClave();if(!clave)return null;
   const j=await secLlamar({...datos,clave});
+  if(j&&j.ok&&datos.accion!=='listar')histCodigo(datos,j);
   if(!j.ok&&/clave/i.test(j.error||''))secClaveAdmin=null;
   return j;
 }
@@ -2106,17 +2132,17 @@ const SEC_QR_LIB='https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/
 function secEsCodigo(c){return secSlug(c.clave||c.etiqueta).includes('codigo')}
 const SEC_NOMBRE_AJENO=/padre|madre|tutor|represent|familiar|hermano|hermana|contacto|profesor|respons|emergencia|autoriz|firma|pariente|abuel|tio|tia|persona_que|recog/;
 function secEsNombre(c){const s=secSlug(c.clave||c.etiqueta);return s.includes('nombre')&&!s.includes('codigo')&&!SEC_NOMBRE_AJENO.test(s)}
-function secEsAuto(c){return secEsCodigo(c)||secEsNombre(c)}
+function secEsAuto(c){return secEsCodigo(c)||secEsNombre(c)||secEsCurso(c)}
 async function secDatosPersona(uid){
   let c=secCodigos.find(x=>x.id===uid);
   if(!c&&secEdit()&&await secCargarCodigos())c=secCodigos.find(x=>x.id===uid);
   const u=users.find(x=>x.id===uid);
   const nombre=c?((c.nombre||'')+' '+(c.apellidos||'')).trim():'';
-  return {codigo:c?.codigo||'',nombre:nombre||u?.nombre||u?.usuario||''};
+  return {codigo:c?.codigo||'',nombre:nombre||u?.nombre||u?.usuario||'',curso:(personas.find(x=>x.usuarioId===uid||x.id===uid)?.curso)||''};
 }
 function secConAuto(d,v,p){
   const o={...v};
-  (d.campos||[]).forEach(c=>{if(secEsCodigo(c)&&p?.codigo)o[c.clave]=p.codigo;else if(secEsNombre(c)&&p?.nombre)o[c.clave]=p.nombre});
+  (d.campos||[]).forEach(c=>{if(secEsCodigo(c)&&p?.codigo)o[c.clave]=p.codigo;else if(secEsNombre(c)&&p?.nombre)o[c.clave]=p.nombre;if(secEsCurso(c)&&p?.curso)o[c.clave]=p.curso});
   return o;
 }
 async function secQrDataURL(url){await secLib(SEC_QR_LIB);const q=qrcode(0,'M');q.addData(url);q.make();return q.createDataURL(5,8)}
@@ -2220,7 +2246,7 @@ function secEditarHuecos(id){
   const d=secDocs.find(x=>x.id===id);if(!d)return;
   const ps=d.campos||[];
   $('sec-panel').innerHTML=`<div class="card" style="background:#fdfbf5">
-  <div class="fl" style="flex-wrap:wrap;gap:6px"><h3 style="margin:0;flex:1">Colocar huecos: ${esc(d.nombre)}</h3><button class="b s" onclick="$('sec-panel').innerHTML=''">Terminar</button></div>
+  <div class="fl" style="flex-wrap:wrap;gap:6px"><h3 style="margin:0;flex:1">Colocar huecos: ${esc(d.nombre)}</h3><button class="b s" onclick="secPreviaPrueba('${id}')">Vista previa con datos de prueba</button><button class="b s" onclick="$('sec-panel').innerHTML=''">Terminar</button></div>
   <div class="fl" style="gap:6px;flex-wrap:wrap;margin:8px 0"><small>Al tocar la imagen se añade un hueco:</small><select id="sh-nuevo-tipo" style="width:auto">${Object.entries(SEC_TIPOS_HUECO).map(([k,t])=>`<option value="${k}">${t}</option>`).join('')}</select><select id="sh-nuevo-tam" style="width:auto"><option value="pequeno">Tamaño pequeño</option><option value="mediano" selected>Tamaño mediano</option><option value="grande">Tamaño grande</option></select></div>
   <small>Arrastra un hueco para moverlo. Toca uno para cambiar su nombre, tipo, posición y tamaño.</small>
   <div id="sh-lienzo" onclick="secColocar(event,'${id}')" style="position:relative;display:inline-block;max-width:100%;margin-top:8px;cursor:crosshair"><img src="${d.imagen}" style="display:block;max-width:100%;height:auto;pointer-events:none;user-select:none">${ps.map((p,i)=>secMarcaEd(p,i)).join('')}</div>
@@ -2386,6 +2412,218 @@ async function secDescargarConjunto(id,enBlanco){
   const d=secDocs.find(x=>x.id===id);if(!d)return;
   if(enBlanco)return secEmitirDocumento(d,[{p:{},vals:{}}],true,1);
   return secAbrirDescarga(id);
+}
+
+// Vista previa del documento con datos de prueba (para ver si los huecos están bien colocados)
+function secPreviaPrueba(id){
+  const d=secDocs.find(x=>x.id===id);if(!d)return;
+  const v={};
+  (d.campos||[]).forEach(c=>{
+    const s=secSlug(c.clave||c.etiqueta);
+    if(c.tipo==='check')v[c.clave]='1';
+    else if(c.tipo==='firma')v[c.clave]=c.fija||'';
+    else v[c.clave]=/num|grupo|dni|telef|curso|edad|cuenta|codigo/.test(s)?'1 2 3':'Prueba';
+  });
+  $('sh-edit').innerHTML=`<div class="card" style="margin:0"><b>Vista previa con datos de prueba</b><small style="display:block;color:#7b6a55">Los textos salen como «Prueba» y los números como «1 2 3». Sirve para ver si algún hueco queda desalineado.</small><div style="position:relative;display:inline-block;max-width:100%;margin-top:8px"><img src="${d.imagen}" style="display:block;max-width:100%;height:auto">${(d.campos||[]).map(c=>secMarcaHTML(c,v,'void(0)')).join('')}</div><div class="fl" style="margin-top:8px"><button class="b s" onclick="$('sh-edit').innerHTML=''">Cerrar</button></div></div>`;
+}
+
+// ===== Atención al usuario, políticas y pie de página =====
+const POL_DEF={
+  privacidad:'Escribe aquí la política de privacidad del centro.',
+  cookies:'Escribe aquí la política de cookies.',
+  atencion:'Si tienes algún problema con la aplicación, escribe aquí y el administrador te responderá lo antes posible.'
+};
+const polDe=k=>(cfg.pol&&typeof cfg.pol[k]==='string'&&cfg.pol[k].trim())?cfg.pol[k]:POL_DEF[k];
+let mensajesAt=[];
+function pieLegalHtml(){
+  return `<footer id="pie-legal" style="margin-top:24px;padding:12px 8px;border-top:1px solid #e6d9b8;text-align:center;font-size:13px;color:#6b5a45;display:flex;gap:14px;justify-content:center;flex-wrap:wrap"><a href="#" onclick="event.preventDefault();secAtencionAbrir()">Servicio de atención al usuario</a><a href="#" onclick="event.preventDefault();verPolitica('privacidad')">Política de privacidad</a><a href="#" onclick="event.preventDefault();verPolitica('cookies')">Política de cookies</a></footer>`;
+}
+function verPolitica(k){
+  const t=k==='cookies'?'Política de cookies':'Política de privacidad';
+  ovHtml(`<h2>${t}</h2><div style="white-space:pre-wrap;line-height:1.5">${esc(polDe(k))}</div><div class="bar"><button class="b s" onclick="cerrarOv()">Cerrar</button></div>`);
+}
+function secAtencionAbrir(){
+  ovHtml(`<h2>Servicio de atención al usuario</h2><p style="white-space:pre-wrap;margin:0 0 8px">${esc(polDe('atencion'))}</p>
+  <label>Nombre y apellidos</label><input id="at-nom" autocomplete="name">
+  <label>Teléfono o correo para responderte</label><input id="at-con" autocomplete="email">
+  <label>Tipo de problema</label><select id="at-tipo"><option>Acceso a la app</option><option>Contraseña o código</option><option>Datos personales</option><option>Otro</option></select>
+  <label>Describe el problema</label><textarea id="at-txt" rows="4"></textarea>
+  <div class="bar"><button class="b s" onclick="cerrarOv()">Cancelar</button><button class="b" onclick="atencionEnviar()">Enviar</button></div>`);
+}
+async function atencionEnviar(){
+  const nombre=$('at-nom').value.trim(),contacto=$('at-con').value.trim(),texto=$('at-txt').value.trim();
+  if(!nombre||!texto)return dlg({title:'Faltan datos',msg:'Escribe tu nombre y describe el problema.',ok:'Vale'});
+  try{
+    await firebase.firestore().collection('mensajes').add({nombre,contacto,tipo:$('at-tipo').value,texto,estado:'pendiente',fecha:new Date().toLocaleString('es-ES'),creado:Date.now()});
+    cerrarOv();
+    await dlg({title:'Enviado',msg:'Tu mensaje se ha enviado al administrador.',ok:'Vale'});
+  }catch(e){await dlg({title:'No se pudo enviar',msg:String(e.message||e),ok:'Vale'})}
+}
+async function mensajeAtendido(id){
+  try{await firebase.firestore().collection('mensajes').doc(id).update({estado:'atendido',atendidoPor:me?.id||'',atendido:new Date().toLocaleString('es-ES')})}catch(e){dbFail(e)}
+}
+function mensajesAtHtml(){
+  const L=mensajesAt.filter(m=>m.estado!=='atendido').sort((a,b)=>(b.creado||0)-(a.creado||0));
+  if(!L.length)return '';
+  return `<b style="display:block;margin:12px 0 6px">Atención al usuario</b>`+L.map(m=>`<div class="item" style="display:block"><b>${esc(m.nombre)}</b> · ${esc(m.tipo||'')}<br><small>${esc(m.contacto||'')} · ${esc(m.fecha||'')}</small><p style="white-space:pre-wrap;margin:6px 0">${esc(m.texto)}</p><button class="b s" onclick="mensajeAtendido('${m.id}')">Marcar atendido</button></div>`).join('');
+}
+// Políticas editables (autoguardado)
+let polBorr=null,polT=null;
+function polAdminHtml(){
+  polBorr={privacidad:polDe('privacidad'),cookies:polDe('cookies'),atencion:polDe('atencion')};
+  return `<small style="color:#6b5a45">Los cambios se guardan automáticamente y se ven en el pie de todas las pantallas.</small>
+  <label>Política de privacidad</label><textarea rows="6" oninput="polSet('privacidad',this.value)">${esc(polBorr.privacidad)}</textarea>
+  <label>Política de cookies</label><textarea rows="5" oninput="polSet('cookies',this.value)">${esc(polBorr.cookies)}</textarea>
+  <label>Texto del servicio de atención al usuario</label><textarea rows="3" oninput="polSet('atencion',this.value)">${esc(polBorr.atencion)}</textarea>
+  <small id="pol-estado" style="display:block;margin-top:6px;color:#7b6a55;min-height:18px"></small>`;
+}
+function polSet(k,v){polBorr[k]=v;const e=$('pol-estado');if(e)e.textContent='Guardando…';clearTimeout(polT);polT=setTimeout(()=>{Promise.resolve(store.setCfg({...cfg,pol:{...polBorr}})).then(()=>{const x=$('pol-estado');if(x)x.textContent='Guardado automáticamente ✓'}).catch(()=>{const x=$('pol-estado');if(x)x.textContent='No se pudo guardar.'})},600)}
+document.addEventListener('DOMContentLoaded',()=>{
+  document.body.insertAdjacentHTML('beforeend',pieLegalHtml());
+  firebase.firestore().collection('mensajes').onSnapshot(s=>{mensajesAt=s.docs.map(d=>({id:d.id,...d.data()}));if(me&&vista()==='admin')pintarAdmin()});
+});
+
+// ===== Personas: datos de cada persona, roles y datos privados =====
+let personas=[],perQ='',perFotoTmp=null;
+const PER_ROLES={administrador:'Administrador',profesor:'Profesor',usuario:'Usuario'};
+const rolMio=()=>me?(me.admin?'administrador':(me.rol||'usuario')):'usuario';
+const verPrivado=()=>rolMio()==='administrador'||rolMio()==='profesor';
+const perEdit=()=>can('personas_editar');
+function perListaHtml(){
+  const q=perQ.trim().toLowerCase();
+  const L=personas.filter(p=>!q||`${p.nombre||''} ${p.apellidos||''} ${p.curso||''}`.toLowerCase().includes(q))
+    .sort((a,b)=>(a.apellidos||'').localeCompare(b.apellidos||'','es',{sensitivity:'base'}));
+  return L.map(p=>`<div class="item" onclick="perVer('${p.id}')">${p.foto?`<img src="${p.foto}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;margin-right:10px">`:'<span style="width:44px;height:44px;display:inline-block;border-radius:50%;background:#eee;margin-right:10px"></span>'}<div style="flex:1"><b>${esc(p.apellidos||'')}, ${esc(p.nombre||'')}</b><br><small>${esc(p.curso||'')}</small></div><span>›</span></div>`).join('')||'<p style="color:#7b6a55">No hay personas todavía.</p>';
+}
+function pintarPer(){
+  try{secSuscribir()}catch(e){}
+  if(!me){$('per-body').innerHTML='<div class="card">Inicia sesión para ver las personas.</div>';return}
+  $('per-body').innerHTML=`<div class="card"><div class="fl" style="flex-wrap:wrap;gap:6px;margin-bottom:8px"><h2 style="margin:0;flex:1">Personas</h2>${perEdit()?`<select id="per-pase" onchange="perElegirPase(this.value)" style="width:auto"><option value="">— Plantilla de la tarjeta —</option>${secDocs.filter(d=>d.tipo==='escaneo').map(d=>`<option value="${d.id}" ${d.id===cfg.pase?.docId?'selected':''}>${esc(d.nombre)}</option>`).join('')}</select><button class="b s" onclick="perTarjetaPDF(personas.map(x=>x.id))">Descargar todas las tarjetas</button>`:''}${perEdit()?'<button class="b" onclick="perFicha()">＋ Nueva persona</button>':''}<button class="b s" onclick="go(\'home\')">Volver</button></div>
+  <input type="search" id="per-busq" placeholder="Buscar por nombre o curso" value="${esc(perQ)}" oninput="perQ=this.value;$('per-lista').innerHTML=perListaHtml()" style="margin-bottom:10px">
+  ${can('gestionar_usuarios')?cuentasHtml():''}<div id="per-lista">${perListaHtml()}</div></div>`;
+}
+function perVer(id){
+  const p=personas.find(x=>x.id===id);if(!p)return;
+  const priv=verPrivado();
+  const tutor=personas.find(x=>x.id===p.tutorId);
+  $('per-body').innerHTML=`<div class="card"><div class="fl" style="gap:6px;flex-wrap:wrap"><button class="b s" onclick="pintarPer()">Volver</button>${perEdit()?`<button class="b" onclick="perFicha('${id}')">Editar</button>`:''}</div>
+  <div class="fl" style="gap:12px;align-items:center;margin-top:10px">${p.foto?`<img src="${p.foto}" style="width:110px;height:110px;border-radius:10px;object-fit:cover">`:''}<div><h2 style="margin:0">${esc(p.nombre||'')} ${esc(p.apellidos||'')}</h2><small>${esc(p.curso||'')}</small></div></div>
+  <p style="margin-top:12px"><b>Correo:</b> ${esc(p.correo||'—')}<br><b>Teléfono:</b> ${esc(p.telefono||'—')}<br><b>Tutor:</b> ${esc(tutor?((tutor.nombre||'')+' '+(tutor.apellidos||'')).trim():'—')}</p>${perEdit()?`<div class="fl" style="gap:6px;flex-wrap:wrap"><button class="b s" onclick="perVerTarjeta('${id}')">Ver tarjeta de pase</button><button class="b s" onclick="perTarjetaPDF(['${id}'])">Descargar tarjeta (PDF)</button></div><div id="per-tarjeta" style="margin-top:8px"></div>`:''}
+  ${priv?`<h3 style="margin-top:14px">Datos privados</h3><p><b>DNI:</b> ${esc(p.dni||'—')}</p>${(p.padres||[]).map((q,i)=>`<p><b>Padre/madre ${i+1}:</b> ${esc((q.nombre||'')+' '+(q.apellidos||''))}<br>Teléfono: ${esc(q.telefono||'—')} · Correo: ${esc(q.correo||'—')}<br>Dirección: ${esc(q.direccion||'—')}</p>`).join('')}`:'<small style="color:#7b6a55">Los datos privados solo los ven administradores y profesores.</small>'}
+  </div>`;
+}
+function perFotoLeer(input){
+  const f=input.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{const im=new Image();im.onload=()=>{const L=240,s=Math.min(1,L/Math.max(im.naturalWidth,im.naturalHeight));const c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*s);c.height=Math.round(im.naturalHeight*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);perFotoTmp=c.toDataURL('image/jpeg',0.8);$('per-foto-vista').src=perFotoTmp};im.src=rd.result};
+  rd.readAsDataURL(f);
+}
+function perFicha(id){
+  const p=id?personas.find(x=>x.id===id):{};if(!p)return;
+  perFotoTmp=null;
+  const pa=(p.padres||[])[0]||{},pb=(p.padres||[])[1]||{};
+  const bloquePadre=(k,q)=>`<div style="border:1px solid #eee;border-radius:8px;padding:8px;margin-top:6px"><b>Padre/madre ${k}</b>
+    <div class="fl" style="gap:6px;flex-wrap:wrap"><input id="pf-p${k}-nom" placeholder="Nombre" value="${esc(q.nombre||'')}" style="flex:1;min-width:140px"><input id="pf-p${k}-ape" placeholder="Apellidos" value="${esc(q.apellidos||'')}" style="flex:1;min-width:140px"></div>
+    <div class="fl" style="gap:6px;flex-wrap:wrap"><input id="pf-p${k}-tel" placeholder="Teléfono" value="${esc(q.telefono||'')}" style="flex:1;min-width:140px"><input id="pf-p${k}-cor" placeholder="Correo" value="${esc(q.correo||'')}" style="flex:1;min-width:140px"></div>
+    <input id="pf-p${k}-dir" placeholder="Dirección" value="${esc(q.direccion||'')}"></div>`;
+  $('per-body').innerHTML=`<div class="card"><h2 style="margin-top:0">${id?'Editar persona':'Nueva persona'}</h2>
+  <div class="fl" style="gap:12px;align-items:center;flex-wrap:wrap"><img id="per-foto-vista" src="${p.foto||''}" style="width:90px;height:90px;border-radius:10px;object-fit:cover;background:#eee"><input type="file" accept="image/*" onchange="perFotoLeer(this)"></div>
+  <div class="fl" style="gap:6px;flex-wrap:wrap;margin-top:8px"><input id="pf-nom" placeholder="Nombre" value="${esc(p.nombre||'')}" style="flex:1;min-width:160px"><input id="pf-ape" placeholder="Apellidos" value="${esc(p.apellidos||'')}" style="flex:1;min-width:160px"></div>
+  <div class="fl" style="gap:6px;flex-wrap:wrap"><input id="pf-cur" placeholder="Curso (ej. 1º ESO A)" value="${esc(p.curso||'')}" style="flex:1;min-width:160px"><input id="pf-cor" placeholder="Correo" value="${esc(p.correo||'')}" style="flex:1;min-width:160px"></div>
+  <div class="fl" style="gap:6px;flex-wrap:wrap"><input id="pf-tel" placeholder="Teléfono" value="${esc(p.telefono||'')}" style="flex:1;min-width:160px"><select id="pf-tutor" style="flex:1;min-width:160px"><option value="">— Tutor —</option>${personas.filter(x=>x.id!==id).map(x=>`<option value="${x.id}" ${x.id===p.tutorId?'selected':''}>${esc((x.apellidos||'')+', '+(x.nombre||''))}</option>`).join('')}</select></div>
+  <label>Cuenta de la app (para dar el rol)</label><select id="pf-user"><option value="">— Sin cuenta —</option>${users.map(u=>`<option value="${u.id}" ${u.id===p.usuarioId?'selected':''}>${esc(u.nombre||u.usuario)}</option>`).join('')}</select>
+  ${me?.admin?`<label>Rol de acceso</label><select id="pf-rol">${Object.entries(PER_ROLES).map(([k,t])=>`<option value="${k}" ${(users.find(u=>u.id===p.usuarioId)?.rol||'usuario')===k?'selected':''}>${t}</option>`).join('')}</select>`:''}
+  <h3 style="margin:14px 0 4px;font-size:15px">Datos privados</h3>
+  <input id="pf-dni" placeholder="DNI" value="${esc(p.dni||'')}">
+  ${bloquePadre(1,pa)}${bloquePadre(2,pb)}
+  <div class="fl" style="gap:6px;margin-top:12px;justify-content:flex-end"><button class="b s" onclick="${id?`perVer('${id}')`:'pintarPer()'}">Cancelar</button><button class="b" onclick="perGuardar('${id||''}')">Guardar</button></div></div>`;
+}
+async function perGuardar(id){
+  const nombre=$('pf-nom').value.trim();
+  if(!nombre)return dlg({title:'Falta el nombre',msg:'Escribe el nombre de la persona.',ok:'Vale'});
+  const padre=k=>({nombre:$('pf-p'+k+'-nom').value.trim(),apellidos:$('pf-p'+k+'-ape').value.trim(),telefono:$('pf-p'+k+'-tel').value.trim(),correo:$('pf-p'+k+'-cor').value.trim(),direccion:$('pf-p'+k+'-dir').value.trim()});
+  const anterior=id?personas.find(x=>x.id===id):{};
+  const datos={nombre,apellidos:$('pf-ape').value.trim(),curso:$('pf-cur').value.trim(),correo:$('pf-cor').value.trim(),telefono:$('pf-tel').value.trim(),tutorId:$('pf-tutor').value||'',usuarioId:$('pf-user').value||'',dni:$('pf-dni').value.trim(),padres:[padre(1),padre(2)],foto:perFotoTmp!==null?perFotoTmp:(anterior.foto||''),actualizado:Date.now()};
+  try{
+    let pid=id;
+    if(id)await firebase.firestore().collection('personas').doc(id).set(datos);
+    else{const r=await firebase.firestore().collection('personas').add({...datos,creado:Date.now()});pid=r.id}
+    if(me?.admin&&datos.usuarioId&&$('pf-rol'))await firebase.firestore().collection('usuarios').doc(datos.usuarioId).update({rol:$('pf-rol').value});
+    histLog('Persona',(id?'Modificada: ':'Alta: ')+datos.nombre+' '+datos.apellidos);
+    pintarPer();
+    perVer(pid);
+  }catch(e){dbFail(e)}
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  firebase.firestore().collection('personas').onSnapshot(s=>{personas=s.docs.map(d=>({id:d.id,...d.data()}));if(vista()==='per'&&$('per-lista'))$('per-lista').innerHTML=perListaHtml()});
+});
+
+// ===== Historial de cambios (sin contraseñas ni códigos) =====
+let historialDatos=[];
+function histLog(tipo,texto){
+  firebase.firestore().collection('historial').add({tipo,texto,por:me?.nombre||me?.usuario||'',fecha:new Date().toLocaleString('es-ES'),creado:Date.now()}).catch(()=>{});
+}
+function histCodigo(d,j){
+  const c=secCodigos.find(x=>x.id===(d.id||d.usuarioApp));
+  let t='';
+  if(d.accion==='crear')t='Código generado para '+(d.nombre||'');
+  else if(d.accion==='eliminar')t='Código eliminado: '+(c?.nombre||'');
+  else if(d.regenerar)t='Código sustituido por uno nuevo: '+(c?.nombre||'');
+  else if(d.activo===false)t='Código archivado: '+(c?.nombre||'');
+  else if(d.activo===true)t='Código reactivado: '+(c?.nombre||'');
+  else if(d.accion==='cambiar')t='Datos del código modificados: '+(d.nombre||c?.nombre||'');
+  if(t)histLog('Código de acceso',t);
+}
+function histHtml(){
+  const L=historialDatos.slice(0,300);
+  return L.length?L.map(h=>`<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:13px"><b>${esc(h.tipo)}</b> · ${esc(h.texto)}<br><small>${esc(h.por||'')} · ${esc(h.fecha||'')}</small></div>`).join(''):'<small style="color:#7b6a55">Todavía no hay movimientos.</small>';
+}
+function cuentasHtml(){
+  return `<div class="card" style="margin-top:10px"><div class="fl" style="justify-content:space-between;gap:6px;flex-wrap:wrap"><b>Cuentas de la app</b><button class="b" onclick="editUser()">Nueva cuenta</button></div><small style="color:#6b5a45">Crea, edita, habilita o deshabilita cuentas y sus permisos.</small>${users.slice().sort((a,b)=>(a.usuario||'').localeCompare(b.usuario||'')).map(u=>`<div class="item" onclick="editUser('${u.id}')"><div><b>${esc(u.nombre||u.usuario)}</b><br><small>${esc(u.usuario)}${u.admin?' · administrador':''}${u.activo===false?(u.pendiente?' · pendiente':' · deshabilitado'):''}</small></div><span>›</span></div>`).join('')}</div>`;
+}
+const secEsCurso=c=>secSlug(c.clave||c.etiqueta).includes('curso');
+document.addEventListener('DOMContentLoaded',()=>{
+  firebase.firestore().collection('historial').orderBy('creado','desc').limit(300).onSnapshot(s=>{historialDatos=s.docs.map(d=>({id:d.id,...d.data()}))});
+});
+
+// ===== Tarjeta de pase dentro de Personas =====
+async function perElegirPase(id){
+  await store.setCfg({...cfg,pase:{docId:id||''}});
+  pintarPer();
+}
+async function perTarjetaCanvas(p){
+  const d=secDocs.find(x=>x.id===cfg.pase?.docId);if(!d)return null;
+  const vals=secConAuto(d,{},{nombre:((p.nombre||'')+' '+(p.apellidos||'')).trim(),curso:p.curso||''});
+  return secComponerScan(d,vals,{},false,true);
+}
+async function perVerTarjeta(id){
+  const p=personas.find(x=>x.id===id);if(!p)return;
+  const c=await perTarjetaCanvas(p);
+  if(!c)return dlg({title:'Falta la plantilla',msg:'Elige primero la plantilla de la tarjeta, arriba en Personas.',ok:'Vale'});
+  $('per-tarjeta').innerHTML=`<img src="${c.toDataURL('image/jpeg',0.9)}" style="max-width:100%;border-radius:8px">`;
+}
+async function perTarjetaPDF(ids){
+  const d=secDocs.find(x=>x.id===cfg.pase?.docId);
+  if(!d)return dlg({title:'Falta la plantilla',msg:'Elige primero la plantilla de la tarjeta, arriba en Personas.',ok:'Vale'});
+  const lista=ids.map(id=>personas.find(x=>x.id===id)).filter(Boolean);
+  if(!lista.length)return dlg({title:'Sin personas',msg:'No hay personas para generar tarjetas.',ok:'Vale'});
+  await secLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({unit:'pt',format:'a4',orientation:'portrait'});
+  const PW=595,PH=842,M=24,GAP=12,colsN=2,rowsN=4;
+  const cw=(PW-2*M-(colsN-1)*GAP)/colsN, ch=(PH-2*M-(rowsN-1)*GAP)/rowsN;
+  for(let i=0;i<lista.length;i+=colsN*rowsN){
+    if(i>0)pdf.addPage();
+    const grupo=lista.slice(i,i+colsN*rowsN);
+    for(let j=0;j<grupo.length;j++){
+      const cv=await perTarjetaCanvas(grupo[j]);
+      const col=j%colsN,row=Math.floor(j/colsN);
+      const x=M+col*(cw+GAP),y=M+row*(ch+GAP);
+      const sc=Math.min(cw/cv.width,ch/cv.height),w=cv.width*sc,h=cv.height*sc;
+      pdf.addImage(cv.toDataURL('image/jpeg',0.9),'JPEG',x+(cw-w)/2,y+(ch-h)/2,w,h);
+    }
+  }
+  pdf.save(ids.length===1?'Tarjeta - '+lista[0].apellidos+' '+lista[0].nombre+'.pdf':'Tarjetas de pase.pdf');
 }
 
 function secRellenar1(id){
